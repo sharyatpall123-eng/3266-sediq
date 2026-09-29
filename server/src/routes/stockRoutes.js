@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { createPurchase, createSale, listMovements, listPurchases, listSales, moveStockIn, moveStockOut } from "../controllers/stockController.js";
+import { authorize, permit } from "../middleware/authenticate.js";
+const router = Router();
+router.post("/in", permit("stock.in", "administrator", "manager", "store_keeper"), createPurchase);
+router.post("/out", permit("stock.out", "administrator", "manager", "cashier", "store_keeper"), createSale);
+router.post("/move-in", permit("stock.in", "administrator", "manager", "store_keeper"), moveStockIn);
+router.post("/move-out", permit("stock.out", "administrator", "manager", "cashier", "store_keeper"), moveStockOut);
+router.get("/movements", listMovements);
+router.get("/invoices/purchases", listPurchases);
+router.get("/invoices/sales", listSales);
+export default router;

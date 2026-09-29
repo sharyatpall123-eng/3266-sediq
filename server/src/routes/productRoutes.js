@@ -1,0 +1,10 @@
+import { Router } from "express";
+import { createProduct, deleteProduct, getProduct, listProducts, updateProduct } from "../controllers/productController.js";
+import { authorize, permit } from "../middleware/authenticate.js";
+const router = Router();
+router.get("/", listProducts);
+router.post("/", permit("warehouse.manage", "administrator", "manager", "store_keeper"), createProduct);
+router.get("/:id", getProduct);
+router.put("/:id", permit("warehouse.manage", "administrator", "manager", "store_keeper"), updateProduct);
+router.delete("/:id", permit("warehouse.delete", "administrator", "manager"), deleteProduct);
+export default router;

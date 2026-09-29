@@ -1,0 +1,12 @@
+node_modules
+client/dist
+server/.env
+client/.env
+.env
+*.log
+.DS_Store
+.vscode
+coverage
+backups/*.json
+server/.wwebjs_auth_azi/
+server/.wwebjs_cache/

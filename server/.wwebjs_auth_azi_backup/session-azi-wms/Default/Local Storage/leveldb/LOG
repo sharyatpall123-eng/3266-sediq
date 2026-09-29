@@ -1,0 +1,8 @@
+2026/09/24-21:37:42.333 6604 Creating DB C:\Users\Azizullah\Desktop\AZI PROJECT\AZI-SYSTEM-WMS-WHATSAPP-AUTOMATION-FIX\server\.wwebjs_auth_azi\session-azi-wms\Default\Local Storage\leveldb since it was missing.
+2026/09/24-21:37:42.351 6604 Reusing MANIFEST C:\Users\Azizullah\Desktop\AZI PROJECT\AZI-SYSTEM-WMS-WHATSAPP-AUTOMATION-FIX\server\.wwebjs_auth_azi\session-azi-wms\Default\Local Storage\leveldb/MANIFEST-000001
+2026/09/24-21:37:42.354 6604 Recovering log #39
+2026/09/24-21:37:42.358 6604 Reusing old log C:\Users\Azizullah\Desktop\AZI PROJECT\AZI-SYSTEM-WMS-WHATSAPP-AUTOMATION-FIX\server\.wwebjs_auth_azi\session-azi-wms\Default\Local Storage\leveldb/000039.log 
+2026/09/24-21:37:42.359 6604 Delete type=2 #5
+2026/09/24-21:37:42.359 6604 Delete type=2 #34
+2026/09/24-21:37:42.360 6604 Delete type=2 #37
+2026/09/24-21:37:42.360 6604 Delete type=2 #40

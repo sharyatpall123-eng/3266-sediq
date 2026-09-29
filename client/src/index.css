@@ -1,0 +1,1128 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans Arabic", sans-serif;
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+  --color-brand-950: #172554;
+  --animate-fade-up: fade-up 280ms ease-out;
+  --animate-scale-in: scale-in 220ms ease-out;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(.97); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { min-width: 320px; scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    color: #0f172a;
+    background: #eaf2ff;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select, textarea {
+    font: inherit;
+    font-family: "Noto Sans Arabic", sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6,
+  p, span, label {
+    font-family: "Noto Sans Arabic", sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: 0;
+    word-spacing: normal;
+    line-height: 1.6;
+    font-kerning: normal;
+    font-synthesis: none;
+  }
+
+  button { cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+  img, svg { display: block; }
+  ::selection { background: #bfdbfe; color: #172554; }
+}
+
+@layer components {
+  .dashboard-background {
+    background: #f5f8fc;
+  }
+
+  .page-background {
+    background: #f8fafc;
+  }
+
+  .login-background {
+    background-image: linear-gradient(rgba(2,132,199,.08), rgba(255,255,255,.08)), url('/backgrounds/login.jpg');
+    background-size: cover;
+    background-position: center;
+  }
+
+
+  .pashto-text {
+    direction: rtl;
+    text-align: right;
+    line-height: 1.9;
+    letter-spacing: 0;
+  }
+
+  .page-enter {
+    animation: page-enter-luxury 520ms cubic-bezier(.22,1,.36,1) both;
+  }
+
+  .glass-card {
+    @apply rounded-3xl border border-white/65 bg-white/80 shadow-xl shadow-slate-900/10 backdrop-blur-xl;
+  }
+
+  .soft-card {
+    @apply rounded-3xl border border-slate-200/75 bg-white shadow-lg shadow-slate-900/5;
+  }
+
+  .field {
+    @apply h-12 w-full rounded-2xl border border-slate-200 bg-white/90 px-4 text-sm text-slate-900 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100;
+  }
+
+  .textarea-field {
+    @apply min-h-28 w-full resize-y rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100;
+  }
+
+  .primary-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-brand-600 to-sky-500 px-5 py-3 font-bold text-white shadow-lg shadow-brand-600/20 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl disabled:pointer-events-none disabled:opacity-55;
+  }
+
+  .secondary-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-700 shadow-sm transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700;
+  }
+
+  .danger-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-red-600 px-5 py-3 font-bold text-white shadow-lg shadow-red-600/15 transition hover:bg-red-700 disabled:pointer-events-none disabled:opacity-55;
+  }
+
+  .icon-button {
+    @apply inline-flex size-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700;
+  }
+
+  .table-shell {
+    @apply overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 shadow-lg shadow-slate-900/5 backdrop-blur-xl;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-extrabold;
+  }
+
+  .page-title {
+    @apply text-2xl font-black tracking-tight text-slate-950 sm:text-3xl;
+  }
+
+  .page-subtitle {
+    @apply mt-1 text-sm text-slate-500;
+  }
+
+
+  html.dark body {
+    background: #020617;
+    color: #e2e8f0;
+  }
+
+  html.dark .dashboard-background {
+    background: #020617;
+  }
+
+  html.dark .page-background {
+    background-image: linear-gradient(rgba(2,6,23,.82), rgba(15,23,42,.88)), url('/backgrounds/pages.jpg');
+  }
+
+  html.dark .glass-card,
+  html.dark .soft-card,
+  html.dark .table-shell {
+    border-color: rgba(71,85,105,.72);
+    background-color: rgba(15,23,42,.88);
+    color: #e2e8f0;
+  }
+
+  html.dark .field,
+  html.dark .textarea-field {
+    border-color: #475569;
+    background-color: rgba(15,23,42,.9);
+    color: #f8fafc;
+  }
+
+  html.dark .secondary-button,
+  html.dark .icon-button {
+    border-color: #475569;
+    background-color: #1e293b;
+    color: #e2e8f0;
+  }
+
+  html.dark .text-slate-950,
+  html.dark .text-slate-900,
+  html.dark .text-slate-800,
+  html.dark .text-slate-700 {
+    color: #f8fafc !important;
+  }
+
+  html.dark .text-slate-600,
+  html.dark .text-slate-500,
+  html.dark .text-slate-400 {
+    color: #cbd5e1 !important;
+  }
+
+  html.dark .bg-white,
+  html.dark .bg-white\/90,
+  html.dark .bg-white\/80,
+  html.dark .bg-white\/70,
+  html.dark .bg-white\/65,
+  html.dark .bg-slate-50,
+  html.dark .bg-slate-50\/80,
+  html.dark .bg-slate-50\/90 {
+    background-color: rgba(15,23,42,.88) !important;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 transparent;
+  }
+}
+
+@media print {
+  body {
+    background: #fff !important;
+    color: #0f172a !important;
+  }
+
+  aside,
+  button {
+    display: none !important;
+  }
+
+  .dashboard-background,
+  .page-background {
+    background: none !important;
+  }
+
+  .lg\:ml-72 {
+    margin-left: 0 !important;
+  }
+
+  .sticky {
+    position: static !important;
+    padding: 0 !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .glass-card,
+  .soft-card,
+  .table-shell {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/* Dependency-free dashboard entrance animations */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes staggerEnter {
+  from { opacity: 0; transform: translateY(35px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes loanBarGrow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.page-enter {
+  animation: pageEnter .65s cubic-bezier(.22,1,.36,1) both;
+}
+
+.stagger-item {
+  opacity: 0;
+  animation: staggerEnter .85s cubic-bezier(.22,1,.36,1) both;
+}
+
+.stagger-delay-0 { animation-delay: .25s; }
+.stagger-delay-1 { animation-delay: .47s; }
+.stagger-delay-2 { animation-delay: .69s; }
+.stagger-delay-3 { animation-delay: .91s; }
+.stagger-delay-4 { animation-delay: 1.13s; }
+.stagger-delay-5 { animation-delay: 1.35s; }
+.stagger-delay-6 { animation-delay: 1.57s; }
+.stagger-delay-7 { animation-delay: 1.79s; }
+.stagger-delay-8 { animation-delay: 2.01s; }
+.stagger-delay-9 { animation-delay: 2.23s; }
+.stagger-delay-10 { animation-delay: 2.45s; }
+.stagger-delay-11 { animation-delay: 2.67s; }
+.stagger-delay-12 { animation-delay: 2.89s; }
+
+.loan-bar {
+  transform: scaleX(0);
+  animation: loanBarGrow 1.4s cubic-bezier(.22,1,.36,1) 1.15s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .stagger-item,
+  .loan-bar {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+@keyframes page-enter-luxury {
+  from { opacity: 0; transform: translateY(18px) scale(.992); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter { animation: none; }
+}
+
+/* Requested responsive refinements: phone compact, tablet desktop-like, desktop preserved */
+@media (max-width: 767px) {
+  /* Phone only: keep every add/edit form visibly smaller than the page behind it. */
+  .wms-modal {
+    width: min(86vw, 22rem) !important;
+    max-height: 78dvh !important;
+    border-radius: 1rem !important;
+  }
+
+  .wms-modal > header {
+    min-height: 2.75rem !important;
+    padding: .45rem .65rem !important;
+  }
+
+  .wms-modal > header h2 {
+    font-size: .95rem !important;
+    line-height: 1.25rem !important;
+  }
+
+  .wms-modal > header .icon-button {
+    width: 2rem !important;
+    height: 2rem !important;
+    border-radius: .7rem !important;
+  }
+
+  .wms-modal-body { padding: .55rem !important; }
+
+  .wms-modal form {
+    gap: .45rem !important;
+  }
+
+  .wms-modal form.space-y-2 > :not([hidden]) ~ :not([hidden]),
+  .wms-modal form.space-y-3 > :not([hidden]) ~ :not([hidden]),
+  .wms-modal form.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: .45rem !important;
+  }
+
+  .wms-modal .field {
+    height: 2.15rem !important;
+    min-height: 2.15rem !important;
+    border-radius: .7rem !important;
+    padding-left: .65rem !important;
+    padding-right: .65rem !important;
+    font-size: .78rem !important;
+  }
+
+  .wms-modal textarea.field,
+  .wms-modal .textarea-field {
+    height: 3.35rem !important;
+    min-height: 3.35rem !important;
+    padding-top: .5rem !important;
+    padding-bottom: .5rem !important;
+    border-radius: .7rem !important;
+  }
+
+  .wms-modal label > span:first-child {
+    margin-bottom: .25rem !important;
+    font-size: .72rem !important;
+    line-height: 1rem !important;
+  }
+
+  .wms-modal .primary-button,
+  .wms-modal .secondary-button,
+  .wms-modal .danger-button {
+    min-height: 2.2rem !important;
+    height: 2.2rem !important;
+    border-radius: .72rem !important;
+    padding: .4rem .65rem !important;
+    font-size: .78rem !important;
+  }
+
+  /* Compact the decorative intro/banner used by debtor, representative and warehouse forms. */
+  .wms-modal form > div:first-child {
+    border-radius: .8rem !important;
+    padding: .55rem .65rem !important;
+  }
+
+  .wms-modal form > div:first-child h3,
+  .wms-modal form > div:first-child p.text-lg,
+  .wms-modal form > div:first-child p.text-xl {
+    margin-top: .1rem !important;
+    font-size: .9rem !important;
+    line-height: 1.2rem !important;
+  }
+
+  .wms-modal form > div:first-child p:not(.text-lg):not(.text-xl) {
+    font-size: .65rem !important;
+    line-height: .9rem !important;
+  }
+
+  .wms-modal form > div:first-child span[class*="size-"] {
+    width: 2.15rem !important;
+    height: 2.15rem !important;
+    border-radius: .65rem !important;
+    font-size: 1rem !important;
+  }
+
+  /* Debtor photo chooser is useful, but it should not dominate the phone modal. */
+  .wms-modal form > label.group {
+    min-height: 3.25rem !important;
+    gap: .5rem !important;
+    border-radius: .8rem !important;
+    padding: .5rem !important;
+  }
+
+  .wms-modal form > label.group > span:first-child {
+    width: 2.6rem !important;
+    height: 2.6rem !important;
+    border-radius: .75rem !important;
+  }
+
+  .wms-modal form > label.group > span:last-of-type {
+    padding: .3rem .5rem !important;
+    font-size: .65rem !important;
+  }
+
+  .wms-modal form .grid { gap: .45rem !important; }
+  .wms-modal form .pt-3 { padding-top: .5rem !important; }
+  .wms-modal form .mt-3 { margin-top: .5rem !important; }
+
+  /* Delivery form: shrink the location and rent controls on phones. */
+  .wms-modal form button.h-10 { height: 2.15rem !important; font-size: .75rem !important; }
+  .wms-modal form section { border-radius: .8rem !important; padding: .5rem !important; }
+}
+
+@media (min-width: 768px) and (max-width: 1279px) {
+  main { padding-top: .75rem !important; }
+  .page-title { font-size: 1.5rem; }
+  [role="dialog"] { max-height: 90dvh !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* iPad/tablet: desktop-like density without changing phone or desktop layouts. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .wms-topbar-wrap {
+    padding: .5rem .65rem !important;
+  }
+  .wms-topbar-wrap .glass-card {
+    min-height: 52px !important;
+    padding-top: .35rem !important;
+    padding-bottom: .35rem !important;
+    border-radius: 18px !important;
+  }
+  .wms-topbar-wrap .icon-button,
+  .wms-topbar-wrap a > div:first-child {
+    width: 2.15rem !important;
+    height: 2.15rem !important;
+    border-radius: .75rem !important;
+  }
+
+  /* Scale only the page canvas. This gives iPad the laptop-like overview requested. */
+  .wms-main-content {
+    width: 116.3% !important;
+    zoom: .86;
+    padding-left: .65rem !important;
+    padding-right: .65rem !important;
+    padding-bottom: .75rem !important;
+  }
+  @supports not (zoom: 1) {
+    .wms-main-content {
+      width: 116.3% !important;
+      transform: scale(.86);
+      transform-origin: top left;
+    }
+  }
+
+  .page-enter { gap: .65rem !important; }
+  .page-enter.space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: .7rem !important; }
+  .page-enter section[class*="rounded"],
+  .page-enter article[class*="rounded"] { border-radius: 18px !important; }
+
+  .page-image-header {
+    min-height: 76px !important;
+    margin-bottom: .65rem !important;
+    padding: .7rem 1rem !important;
+    border-radius: 16px !important;
+  }
+  .page-image-header .page-title { font-size: 1.35rem !important; line-height: 1.55rem !important; }
+  .page-image-header .page-subtitle { font-size: .72rem !important; line-height: 1.05rem !important; max-width: 46rem; }
+
+  /* Main hero headers: shorter on iPad so content stays visible without page-level scrolling. */
+  .page-enter > section:first-child > div:first-child[class*="min-h"],
+  .page-enter > section:first-child > div:first-child[class*="pb-"] {
+    min-height: 118px !important;
+    padding-top: .85rem !important;
+    padding-bottom: 2.8rem !important;
+  }
+
+  .page-enter h1[class*="text-3xl"],
+  .page-enter h1[class*="text-4xl"],
+  .page-enter h1[class*="text-5xl"] {
+    font-size: 1.7rem !important;
+    line-height: 2rem !important;
+  }
+
+  .page-enter [class*="grid-cols-2"] { gap: .65rem !important; }
+  .page-enter [class*="shadow-xl"] { box-shadow: 0 8px 22px rgba(15,23,42,.09) !important; }
+}
+
+/* Final requested polish: thin page frame on every screen */
+.wms-page-frame {
+  border: 1px solid rgba(148, 163, 184, .32);
+  border-radius: 20px;
+  padding: 10px;
+  background: rgba(255,255,255,.12);
+}
+
+/* Phone: shorter image headers and denser summary cards */
+@media (max-width: 767px) {
+  .wms-page-frame { border-radius: 15px; padding: 6px; }
+  .page-enter > section:first-child > div:first-child[class*="min-h"],
+  .page-enter > section:first-child > div:first-child[class*="pb-"] {
+    min-height: 92px !important;
+    padding-top: .65rem !important;
+    padding-bottom: 2.2rem !important;
+  }
+  .page-enter > section:first-child h1 { font-size: 1.35rem !important; line-height: 1.55rem !important; }
+  .page-enter > section:first-child p { font-size: .72rem !important; line-height: 1rem !important; }
+  .page-enter > section:first-child + div,
+  .page-enter > section:first-child > div:last-child[class*="grid"] { gap: .45rem !important; }
+  .page-enter article[class*="shadow"] { border-radius: 14px !important; }
+}
+
+/* iPad/tablet: narrow temporary sidebar, compact cards/headers/modals, two warehouses per row */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .wms-shell-content { margin-left: 0 !important; }
+  .wms-sidebar { width: min(34vw, 238px) !important; left: 8px !important; top: 8px !important; bottom: 8px !important; height: calc(100dvh - 16px) !important; }
+  .wms-sidebar > div { border-radius: 24px !important; }
+  .wms-sidebar [class*="min-h-[170px]"] { min-height: 126px !important; padding-top: .8rem !important; padding-bottom: .7rem !important; }
+  .wms-sidebar nav { padding-top: .35rem !important; }
+  .wms-sidebar nav button, .wms-sidebar nav a { font-size: .78rem !important; }
+
+  .wms-main-content { zoom: 1 !important; width: 100% !important; padding-left: .55rem !important; padding-right: .55rem !important; }
+  .wms-page-frame { padding: 7px; border-radius: 16px; }
+  .page-enter { gap: .5rem !important; }
+  .page-enter.space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: .5rem !important; }
+  .page-enter > section:first-child > div:first-child[class*="min-h"],
+  .page-enter > section:first-child > div:first-child[class*="pb-"] { min-height: 92px !important; padding-top: .6rem !important; padding-bottom: 2.25rem !important; }
+  .page-enter > section:first-child h1 { font-size: 1.35rem !important; line-height: 1.55rem !important; }
+  .page-enter article { padding-top: .65rem !important; padding-bottom: .65rem !important; }
+
+  .wms-modal { width: min(72vw, 31rem) !important; max-height: 76dvh !important; border-radius: 18px !important; }
+  .wms-modal > header { min-height: 2.8rem !important; padding: .45rem .7rem !important; }
+  .wms-modal-body { padding: .65rem !important; }
+  .wms-modal form { gap: .5rem !important; }
+  .wms-modal .field { min-height: 2.25rem !important; height: 2.25rem !important; font-size: .78rem !important; }
+  .wms-modal textarea.field { min-height: 3.5rem !important; height: 3.5rem !important; }
+
+  /* Warehouse card grid: exactly two useful cards on common iPad widths. */
+  .page-enter [class*="grid-template-columns:repeat(auto-fit"] { grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap: .65rem !important; }
+}
+
+
+/* ===== 2026-09-18 final visual corrections ===== */
+/* Remove the old dashboard page photo: only the new daisy is used in page heroes. */
+.dashboard-background,
+html.dark .dashboard-background {
+  background-image: none !important;
+  background-color: #f5f8fc !important;
+}
+
+/* Shared daisy photo treatment. It is intentionally zoomed out so the flower stays visible. */
+.wms-photo-hero,
+.wms-dashboard-hero {
+  background-repeat: no-repeat !important;
+  background-color: #164e73 !important;
+  background-position: right 46% !important;
+  background-size: auto 185% !important;
+}
+.wms-dashboard-hero { background-size: auto 175% !important; }
+
+/* Faster, softer staged entrance. The old multi-second delays made the app feel slow. */
+.stagger-item { animation-duration: .42s !important; }
+.stagger-delay-0 { animation-delay: .03s !important; }
+.stagger-delay-1 { animation-delay: .08s !important; }
+.stagger-delay-2 { animation-delay: .13s !important; }
+.stagger-delay-3 { animation-delay: .18s !important; }
+.stagger-delay-4 { animation-delay: .23s !important; }
+.stagger-delay-5 { animation-delay: .28s !important; }
+.stagger-delay-6 { animation-delay: .33s !important; }
+.stagger-delay-7 { animation-delay: .38s !important; }
+.stagger-delay-8 { animation-delay: .43s !important; }
+.stagger-delay-9 { animation-delay: .48s !important; }
+.stagger-delay-10 { animation-delay: .53s !important; }
+.stagger-delay-11 { animation-delay: .58s !important; }
+.stagger-delay-12 { animation-delay: .63s !important; }
+
+/* Phone: genuinely compact hero + summary cards + add/edit modals. */
+@media (max-width: 767px) {
+  .wms-hero-section { border-radius: 18px !important; }
+  .wms-hero-section > .wms-photo-hero {
+    min-height: 132px !important;
+    padding: .65rem .8rem 2.1rem !important;
+  }
+  .wms-photo-hero { background-size: auto 165% !important; }
+  .wms-hero-section h1 { font-size: 1.2rem !important; line-height: 1.35rem !important; margin-top: .2rem !important; }
+  .wms-hero-section p { font-size: .65rem !important; line-height: .9rem !important; margin-top: .25rem !important; }
+  .wms-hero-section button { min-height: 2rem !important; height: 2rem !important; padding: .25rem .7rem !important; border-radius: .7rem !important; font-size: .72rem !important; }
+
+  .wms-summary-grid { margin-top: -1.7rem !important; gap: .45rem !important; padding: 0 .55rem .7rem !important; }
+  .wms-summary-card { min-height: 74px !important; padding: .55rem !important; border-radius: 13px !important; }
+  .wms-summary-card > div { gap: .45rem !important; }
+  .wms-summary-card span[class*="size-12"], .wms-summary-card span[class*="size-14"] { width: 2rem !important; height: 2rem !important; border-radius: .65rem !important; font-size: .95rem !important; }
+  .wms-summary-card p { margin-top: .1rem !important; }
+  .wms-summary-card p:first-child { font-size: .62rem !important; line-height: .8rem !important; }
+  .wms-summary-card p:nth-child(2) { font-size: 1rem !important; line-height: 1.15rem !important; }
+  .wms-summary-card p:nth-child(3) { font-size: .58rem !important; line-height: .75rem !important; }
+
+  .wms-dashboard-hero { padding: .65rem .8rem !important; border-radius: 15px !important; background-size: auto 160% !important; }
+  .wms-dashboard-hero > div:last-child { min-height: 66px !important; }
+  .wms-dashboard-hero h1 { font-size: 1.1rem !important; }
+  .wms-dashboard-summary-grid { gap: .45rem !important; }
+  .wms-dashboard-summary { min-height: 58px !important; padding: .4rem .5rem !important; border-radius: 12px !important; gap: .4rem !important; }
+  .wms-dashboard-summary > div:first-child { width: 1.85rem !important; height: 1.85rem !important; border-radius: .6rem !important; font-size: .85rem !important; }
+  .wms-dashboard-summary p:first-child { font-size: .55rem !important; }
+  .wms-dashboard-summary p:last-child { font-size: .9rem !important; margin-top: 0 !important; }
+
+  .wms-modal { width: min(82vw, 19.5rem) !important; max-height: 70dvh !important; border-radius: 14px !important; }
+  .wms-modal > header { min-height: 2.35rem !important; padding: .3rem .5rem !important; }
+  .wms-modal > header h2 { font-size: .82rem !important; }
+  .wms-modal-body { padding: .42rem !important; }
+  .wms-modal form { gap: .3rem !important; }
+  .wms-modal form.space-y-3 > :not([hidden]) ~ :not([hidden]),
+  .wms-modal form.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: .32rem !important; }
+  .wms-modal .field { height: 1.95rem !important; min-height: 1.95rem !important; font-size: .7rem !important; border-radius: .6rem !important; }
+  .wms-modal textarea.field, .wms-modal .textarea-field { height: 2.7rem !important; min-height: 2.7rem !important; }
+  .wms-modal label > span:first-child { font-size: .64rem !important; margin-bottom: .15rem !important; }
+  .wms-modal form > div:first-child { padding: .4rem .5rem !important; border-radius: .65rem !important; }
+  .wms-modal form > label.group { min-height: 2.7rem !important; padding: .35rem !important; }
+  .wms-modal form > label.group > span:first-child { width: 2.1rem !important; height: 2.1rem !important; }
+  .wms-modal .primary-button, .wms-modal .secondary-button { height: 1.95rem !important; min-height: 1.95rem !important; font-size: .7rem !important; }
+}
+
+/* iPad/tablet landscape: laptop-like layout, but everything is smaller and organized. */
+@media (min-width: 768px) and (max-width: 1279px) and (orientation: landscape) {
+  .wms-sidebar {
+    transform: translateX(0) !important;
+    width: 188px !important;
+    left: 6px !important;
+    top: 6px !important;
+    bottom: 6px !important;
+    height: calc(100dvh - 12px) !important;
+  }
+  .wms-sidebar > div { border-radius: 18px !important; }
+  .wms-sidebar > div > div:first-child { min-height: 116px !important; padding: .65rem .55rem !important; border-radius: 18px 18px 0 0 !important; }
+  .wms-sidebar > div > div:first-child [class*="size-[66px]"] { width: 3rem !important; height: 3rem !important; }
+  .wms-sidebar nav { padding-left: .45rem !important; font-size: .72rem !important; }
+  .wms-sidebar nav button, .wms-sidebar nav a { min-height: 2rem !important; font-size: .7rem !important; }
+  .wms-shell-content { margin-left: 198px !important; }
+  .wms-topbar-wrap { padding: .35rem .5rem !important; }
+  .wms-topbar-wrap .glass-card { min-height: 44px !important; }
+  .wms-main-content { width: 100% !important; zoom: 1 !important; padding: 0 .45rem .55rem !important; }
+  .wms-page-frame { padding: 5px !important; border-radius: 13px !important; min-height: calc(100vh - 62px) !important; }
+
+  .wms-hero-section { border-radius: 15px !important; }
+  .wms-hero-section > .wms-photo-hero { min-height: 100px !important; padding: .55rem .8rem 2rem !important; }
+  .wms-photo-hero { background-size: auto 155% !important; }
+  .wms-hero-section h1 { font-size: 1.15rem !important; line-height: 1.3rem !important; }
+  .wms-hero-section p { font-size: .62rem !important; line-height: .85rem !important; }
+  .wms-summary-grid { margin-top: -1.6rem !important; gap: .45rem !important; padding: 0 .55rem .65rem !important; grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
+  .wms-summary-card { min-height: 62px !important; padding: .45rem .5rem !important; border-radius: 12px !important; }
+  .wms-summary-card > div { gap: .4rem !important; }
+  .wms-summary-card span[class*="size-12"], .wms-summary-card span[class*="size-14"] { width: 1.8rem !important; height: 1.8rem !important; border-radius: .55rem !important; font-size: .8rem !important; }
+  .wms-summary-card p:first-child { font-size: .55rem !important; }
+  .wms-summary-card p:nth-child(2) { font-size: .9rem !important; line-height: 1rem !important; margin-top: 0 !important; }
+  .wms-summary-card p:nth-child(3) { font-size: .52rem !important; margin-top: 0 !important; }
+
+  .wms-dashboard-hero { padding: .45rem .75rem !important; border-radius: 13px !important; background-size: auto 150% !important; }
+  .wms-dashboard-hero > div:last-child { min-height: 58px !important; }
+  .wms-dashboard-hero h1 { font-size: 1rem !important; }
+  .wms-dashboard-hero p { font-size: .6rem !important; margin-top: .15rem !important; }
+  .wms-dashboard-summary-grid { grid-template-columns: repeat(5,minmax(0,1fr)) !important; gap: .4rem !important; }
+  .wms-dashboard-summary { display: flex !important; min-height: 52px !important; padding: .35rem .45rem !important; border-radius: 11px !important; gap: .35rem !important; }
+  .wms-dashboard-summary > div:first-child { width: 1.7rem !important; height: 1.7rem !important; border-radius: .5rem !important; font-size: .75rem !important; }
+  .wms-dashboard-summary p:first-child { font-size: .5rem !important; }
+  .wms-dashboard-summary p:last-child { font-size: .85rem !important; margin-top: 0 !important; }
+
+  .wms-warehouse-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: .55rem !important; }
+
+  .wms-modal { width: min(58vw, 25rem) !important; max-height: 68dvh !important; border-radius: 14px !important; }
+  .wms-modal > header { min-height: 2.3rem !important; padding: .3rem .55rem !important; }
+  .wms-modal-body { padding: .45rem !important; }
+  .wms-modal .field { min-height: 2rem !important; height: 2rem !important; font-size: .7rem !important; }
+  .wms-modal textarea.field, .wms-modal .textarea-field { min-height: 2.8rem !important; height: 2.8rem !important; }
+  .wms-modal form.space-y-3 > :not([hidden]) ~ :not([hidden]), .wms-modal form.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: .35rem !important; }
+}
+
+/* Portrait tablets keep a compact drawer; landscape is the permanent mini-laptop sidebar above. */
+@media (min-width: 768px) and (max-width: 1279px) and (orientation: portrait) {
+  .wms-sidebar { width: min(31vw, 220px) !important; }
+  .wms-summary-card { min-height: 70px !important; padding: .55rem !important; }
+  .wms-dashboard-summary { min-height: 58px !important; }
+}
+
+/* ===== User-requested final polish 2026-09-18 ===== */
+html, body, #root { width: 100%; min-height: 100%; }
+body { overflow-x: hidden; }
+
+/* Keep all summary cards visually consistent, compact and easy to scan. */
+.wms-summary-card {
+  min-width: 0;
+  border-radius: 18px !important;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, .08) !important;
+}
+.wms-summary-card:hover {
+  box-shadow: 0 15px 34px rgba(37, 99, 235, .13) !important;
+}
+
+/* Warehouse stock list: real table separation between every row and column. */
+.wms-stock-table th,
+.wms-stock-table td,
+.wms-history-table th,
+.wms-history-table td {
+  border-bottom: 1px solid #e2e8f0;
+  border-left: 1px solid #e2e8f0;
+}
+.wms-stock-table th:last-child,
+.wms-stock-table td:last-child,
+.wms-history-table th:last-child,
+.wms-history-table td:last-child {
+  border-left: 0;
+}
+.wms-stock-table thead th {
+  background: #f8fafc;
+}
+.wms-stock-table tbody tr:nth-child(even) {
+  background: rgba(248, 250, 252, .72);
+}
+.wms-stock-table tbody tr:hover {
+  background: rgba(239, 246, 255, .9);
+}
+
+/* Stock history is deliberately short and dense; Stock List keeps the screen space. */
+.wms-stock-history th,
+.wms-stock-history td {
+  white-space: nowrap;
+}
+
+/* Stock in/out should feel like a proper workspace on laptop, not a tiny box. */
+@media (min-width: 1280px) {
+  .wms-stock-workspace {
+    min-height: 430px;
+    border-radius: 24px !important;
+  }
+}
+
+/* iPad/tablet landscape: permanent sidebar, full available canvas and laptop-like density. */
+@media (min-width: 768px) and (max-width: 1279px) and (orientation: landscape) {
+  .wms-sidebar {
+    display: block !important;
+    visibility: visible !important;
+    transform: translateX(0) !important;
+    width: 182px !important;
+    left: 6px !important;
+    top: 6px !important;
+    bottom: 6px !important;
+    height: calc(100dvh - 12px) !important;
+  }
+
+  .wms-shell-content {
+    box-sizing: border-box;
+    width: calc(100% - 190px) !important;
+    max-width: calc(100% - 190px) !important;
+    min-width: 0 !important;
+    margin-left: 190px !important;
+  }
+
+  .wms-topbar-wrap {
+    padding: .3rem .4rem !important;
+  }
+  .wms-topbar-wrap header {
+    min-height: 42px !important;
+    border-radius: 14px !important;
+  }
+  .wms-topbar-wrap button[aria-label="Open menu"] {
+    display: none !important;
+  }
+
+  .wms-main-content {
+    box-sizing: border-box;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 .4rem .45rem !important;
+  }
+  .wms-page-frame {
+    min-height: calc(100dvh - 54px) !important;
+    width: 100% !important;
+    padding: 4px !important;
+    border-radius: 12px !important;
+  }
+
+  .page-enter {
+    min-width: 0 !important;
+  }
+  .page-enter.space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: .45rem !important;
+  }
+
+  .wms-summary-card {
+    min-height: 58px !important;
+    padding: .4rem .5rem !important;
+    border-radius: 12px !important;
+  }
+  .wms-summary-card span[class*="size-12"],
+  .wms-summary-card span[class*="size-14"],
+  .wms-summary-card span[class*="size-11"] {
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+    border-radius: .55rem !important;
+    font-size: .8rem !important;
+  }
+  .wms-summary-card p:nth-child(2) {
+    font-size: .9rem !important;
+    line-height: 1rem !important;
+  }
+
+  .wms-dashboard-feature-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: .5rem !important;
+  }
+  .wms-dashboard-analysis-grid {
+    grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr) !important;
+    gap: .5rem !important;
+  }
+  .wms-dashboard-slider,
+  .wms-dashboard-weather {
+    min-height: 190px !important;
+    border-radius: 14px !important;
+  }
+  .wms-dashboard-slider > div.relative,
+  .wms-dashboard-weather > div.relative {
+    min-height: 190px !important;
+  }
+  .wms-dashboard-slider h2 {
+    font-size: 1.15rem !important;
+  }
+  .wms-dashboard-slider p,
+  .wms-dashboard-slider button {
+    font-size: .65rem !important;
+  }
+  .wms-dashboard-chart {
+    border-radius: 14px !important;
+    padding: .65rem !important;
+  }
+  .wms-dashboard-chart .h-56,
+  .wms-dashboard-chart .sm\:h-60 {
+    height: 10.5rem !important;
+  }
+  .wms-dashboard-recent {
+    border-radius: 14px !important;
+    padding: .6rem !important;
+  }
+
+  .wms-warehouse-overview-grid {
+    grid-template-columns: minmax(0, 1fr) 220px !important;
+    gap: .55rem !important;
+  }
+  .wms-warehouse-card {
+    border-radius: 15px !important;
+  }
+  .wms-warehouse-card > div:first-child {
+    padding-top: .55rem !important;
+    padding-bottom: .55rem !important;
+  }
+  .wms-warehouse-card h3 {
+    font-size: .95rem !important;
+  }
+  .wms-warehouse-card > div:nth-child(2) {
+    gap: .35rem !important;
+    padding: .45rem .45rem 0 !important;
+  }
+  .wms-warehouse-card > div:nth-child(2) > div {
+    border-radius: 10px !important;
+    padding: .4rem !important;
+  }
+  .wms-warehouse-card > div:nth-child(2) p:last-child {
+    font-size: 1.1rem !important;
+  }
+  .wms-warehouse-card > div:last-child {
+    padding: .45rem !important;
+  }
+
+  .wms-stock-table th,
+  .wms-stock-table td {
+    padding: .5rem .6rem !important;
+    font-size: .72rem !important;
+  }
+  .wms-history-table th,
+  .wms-history-table td {
+    padding: .4rem .55rem !important;
+    font-size: .68rem !important;
+  }
+  .wms-stock-history {
+    border-radius: 13px !important;
+  }
+
+  .wms-stock-workspace {
+    max-width: 620px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}
+
+/* Phone keeps forms compact without making fields unreadably tiny. */
+@media (max-width: 767px) {
+  .wms-warehouse-card {
+    border-radius: 16px !important;
+  }
+  .wms-warehouse-card > div:first-child {
+    padding-top: .6rem !important;
+    padding-bottom: .6rem !important;
+  }
+  .wms-warehouse-card > div:nth-child(2) {
+    gap: .35rem !important;
+    padding: .5rem .5rem 0 !important;
+  }
+  .wms-warehouse-card > div:nth-child(2) > div {
+    padding: .45rem !important;
+    border-radius: 11px !important;
+  }
+  .wms-warehouse-card > div:nth-child(2) p:last-child {
+    font-size: 1.15rem !important;
+  }
+  .wms-warehouse-card > div:last-child {
+    padding: .5rem !important;
+  }
+
+  .wms-stock-workspace {
+    max-width: 96vw !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .wms-summary-card {
+    min-height: 64px !important;
+    padding: .5rem !important;
+    border-radius: 12px !important;
+  }
+  .wms-summary-card span[class*="size-12"],
+  .wms-summary-card span[class*="size-14"],
+  .wms-summary-card span[class*="size-11"] {
+    width: 2rem !important;
+    height: 2rem !important;
+    border-radius: .65rem !important;
+    font-size: .9rem !important;
+  }
+}
+
+/* Keep warehouse detail summary in one compact row on iPad landscape. */
+@media (min-width: 768px) and (max-width: 1279px) and (orientation: landscape) {
+  .wms-details-summary-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: .4rem !important;
+  }
+
+  .wms-details-summary-grid > * {
+    min-width: 0 !important;
+  }
+
+  .wms-details-summary-grid .col-span-2 {
+    grid-column: span 1 / span 1 !important;
+  }
+}
+
+/* ===== Final follow-up corrections: 2026-09-18 ===== */
+/* The supplied daisy image must fill the complete hero/header, with no old or blank layer visible. */
+.wms-photo-hero,
+.wms-dashboard-hero {
+  background-image: url('/header-images/header-daisy.jpeg') !important;
+  background-size: cover !important;
+  background-position: center right !important;
+  background-repeat: no-repeat !important;
+  background-color: #0b4e75 !important;
+}
+
+/* Smooth professional step-by-step entrance across every page without long blocking delays. */
+@keyframes wms-section-enter {
+  from { opacity: 0; transform: translateY(12px) scale(.995); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.page-enter > * {
+  opacity: 0;
+  animation: wms-section-enter .46s cubic-bezier(.22,.75,.25,1) forwards;
+  will-change: transform, opacity;
+}
+.page-enter > :nth-child(1) { animation-delay: .03s; }
+.page-enter > :nth-child(2) { animation-delay: .10s; }
+.page-enter > :nth-child(3) { animation-delay: .17s; }
+.page-enter > :nth-child(4) { animation-delay: .24s; }
+.page-enter > :nth-child(5) { animation-delay: .31s; }
+.page-enter > :nth-child(6) { animation-delay: .38s; }
+.page-enter > :nth-child(n+7) { animation-delay: .44s; }
+@media (prefers-reduced-motion: reduce) {
+  .page-enter > * { opacity: 1; animation: none !important; transform: none !important; }
+}
+
+/* Representative report tables use the same clear row/column separation as Stock List/History. */
+.wms-rep-report-table th,
+.wms-rep-report-table td {
+  border-bottom: 1px solid #e2e8f0;
+  border-left: 1px solid #e2e8f0;
+}
+.wms-rep-report-table th:last-child,
+.wms-rep-report-table td:last-child { border-left: 0; }
+.wms-rep-report-table tbody tr:hover { background: rgba(239,246,255,.8); }
+
+/* Tablet/iPad must use the mobile-style hamburger drawer, never a permanent clipped sidebar. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .wms-shell-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+  }
+  .wms-sidebar {
+    display: block !important;
+    visibility: visible !important;
+    width: min(78vw, 270px) !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+  .wms-sidebar.-translate-x-full { transform: translateX(-100%) !important; }
+  .wms-sidebar.translate-x-0 { transform: translateX(0) !important; }
+  .wms-topbar-wrap button[aria-label="Open menu"] { display: inline-flex !important; }
+  .wms-main-content,
+  .wms-page-frame {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .wms-main-content { padding-left: .45rem !important; padding-right: .45rem !important; }
+
+  /* The user requested slightly taller, better balanced warehouse cards. */
+  .wms-warehouse-card { min-height: 300px !important; }
+  .wms-warehouse-card > div:first-child { padding-top: .8rem !important; padding-bottom: .8rem !important; }
+  .wms-warehouse-card > div:nth-child(2) { padding-top: .65rem !important; gap: .5rem !important; }
+  .wms-warehouse-card > div:nth-child(2) > div { padding: .55rem !important; }
+  .wms-warehouse-card > div:last-child { padding: .65rem !important; }
+
+  /* Keep representative summary cards clean on mobile/tablet: label + value only. */
+  .wms-representative-summary-caption { display: none !important; }
+}
+
+/* Phone also hides the explanatory representative captions and keeps the card compact. */
+@media (max-width: 767px) {
+  .wms-representative-summary-caption { display: none !important; }
+}
+
+/* Large touch tablets (including iPad/Android landscape around 1280-1400px) still use the hamburger drawer. */
+@media (min-width: 1280px) and (max-width: 1400px) and (any-pointer: coarse) {
+  .wms-shell-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+  }
+  .wms-sidebar {
+    display: block !important;
+    visibility: visible !important;
+    width: min(78vw, 286px) !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+  .wms-sidebar.-translate-x-full { transform: translateX(-100%) !important; }
+  .wms-sidebar.translate-x-0 { transform: translateX(0) !important; }
+  .wms-sidebar-overlay,
+  .wms-sidebar-close,
+  .wms-topbar-wrap button[aria-label="Open menu"] { display: inline-flex !important; }
+  .wms-main-content,
+  .wms-page-frame {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .wms-main-content { padding-left: .55rem !important; padding-right: .55rem !important; }
+  .wms-warehouse-card { min-height: 300px !important; }
+  .wms-representative-summary-caption { display: none !important; }
+}
+
+/* ===== Noto Sans Arabic - Pashto/Dari final typography ===== */
+
+[dir="rtl"],
+:lang(ps),
+:lang(fa),
+:lang(ar) {
+  font-family: "Noto Sans Arabic", sans-serif !important;
+  letter-spacing: 0 !important;
+  word-spacing: normal !important;
+}
+
+[dir="rtl"] h1,
+[dir="rtl"] h2,
+[dir="rtl"] h3,
+[dir="rtl"] h4,
+[dir="rtl"] h5,
+[dir="rtl"] h6 {
+  font-family: "Noto Sans Arabic", sans-serif !important;
+  letter-spacing: 0 !important;
+  word-spacing: normal !important;
+  line-height: 1.6 !important;
+  font-kerning: normal;
+  font-synthesis: none;
+}
+
+[dir="rtl"] h1.tracking-tight,
+[dir="rtl"] h2.tracking-tight,
+[dir="rtl"] h3.tracking-tight,
+[dir="rtl"] h4.tracking-tight,
+[dir="rtl"] h5.tracking-tight,
+[dir="rtl"] h6.tracking-tight {
+  letter-spacing: 0 !important;
+}
+

@@ -1,0 +1,33 @@
+{
+  "name": "warehouse-system-pro-server",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "create:admin": "node src/scripts/createAdmin.js",
+    "postinstall": "node scripts/patch-whatsapp-webjs-media.mjs && npx puppeteer browsers install chrome"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.57.4",
+    "compression": "1.8.1",
+    "cors": "2.8.5",
+    "dotenv": "17.2.2",
+    "express": "5.1.0",
+    "express-rate-limit": "8.1.0",
+    "helmet": "8.1.0",
+    "morgan": "1.10.1",
+    "multer": "2.0.2",
+    "nodemailer": "7.0.6",
+    "puppeteer": "^24.38.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "sharp": "^0.35.3",
+    "whatsapp-web.js": "https://github.com/wwebjs/whatsapp-web.js/archive/refs/heads/main.tar.gz"
+  },
+  "devDependencies": {
+    "nodemon": "3.1.10"
+  }
+}

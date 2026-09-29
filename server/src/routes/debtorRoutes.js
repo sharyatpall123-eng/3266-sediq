@@ -1,0 +1,16 @@
+import { Router } from "express";
+import { createDebtor, deleteDebtor, getDebtor, listDebtors, recordBalance, recordPayment, updateBalance, updateDebtor, updatePayment, deletePayment, deleteBalance } from "../controllers/debtorController.js";
+import { authorize, permit } from "../middleware/authenticate.js";
+const router = Router();
+router.get("/", listDebtors);
+router.post("/", permit("debtors.manage", "administrator", "manager", "cashier"), createDebtor);
+router.get("/:id", getDebtor);
+router.put("/:id", permit("debtors.manage", "administrator", "manager", "cashier"), updateDebtor);
+router.delete("/:id", permit("debtors.delete", "administrator", "manager"), deleteDebtor);
+router.post("/:id/payments", permit("debtors.manage", "administrator", "manager", "cashier"), recordPayment);
+router.put("/:id/payments/:paymentId", permit("debtors.manage", "administrator", "manager", "cashier"), updatePayment);
+router.delete("/:id/payments/:paymentId", permit("debtors.delete", "administrator", "manager"), deletePayment);
+router.post("/:id/balances", permit("debtors.manage", "administrator", "manager", "cashier"), recordBalance);
+router.put("/:id/balances/:balanceId", permit("debtors.manage", "administrator", "manager", "cashier"), updateBalance);
+router.delete("/:id/balances/:balanceId", permit("debtors.delete", "administrator", "manager"), deleteBalance);
+export default router;

@@ -1,0 +1,4 @@
+2026/09/24-21:37:42.425 6018 Creating DB C:\Users\Azizullah\Desktop\AZI PROJECT\AZI-SYSTEM-WMS-WHATSAPP-AUTOMATION-FIX\server\.wwebjs_auth_azi\session-azi-wms\Default\shared_proto_db\metadata since it was missing.
+2026/09/24-21:37:42.440 6018 Reusing MANIFEST C:\Users\Azizullah\Desktop\AZI PROJECT\AZI-SYSTEM-WMS-WHATSAPP-AUTOMATION-FIX\server\.wwebjs_auth_azi\session-azi-wms\Default\shared_proto_db\metadata/MANIFEST-000001
+2026/09/24-21:37:42.440 6018 Recovering log #3
+2026/09/24-21:37:42.441 6018 Reusing old log C:\Users\Azizullah\Desktop\AZI PROJECT\AZI-SYSTEM-WMS-WHATSAPP-AUTOMATION-FIX\server\.wwebjs_auth_azi\session-azi-wms\Default\shared_proto_db\metadata/000003.log 
