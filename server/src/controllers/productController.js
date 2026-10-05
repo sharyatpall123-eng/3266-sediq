@@ -42,17 +42,97 @@ export const createProduct = asyncHandler(async (request, response) => {
   if (quantity <= 0) throw new ApiError(400, "تعداد ضروري دی او باید له صفر څخه زیات وي.");
   if (!String(payload.name || "").trim()) payload.name = `جنس ${Date.now()}`;
   if (!String(payload.sku || "").trim()) payload.sku = `AUTO-${Date.now()}`;
-  const { data, error } = await supabaseAdmin.from("products").insert({ ...payload, quantity, created_by: request.auth.user.id }).select().single();
+
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .insert({ ...payload, quantity, created_by: request.auth.user.id })
+    .select()
+    .single();
   if (error) throw new ApiError(400, error.message);
-  await supabaseAdmin.from("activity_logs").insert({ user_id: request.auth.user.id, action: "product_created", entity_type: "product", entity_id: data.id, details: { name: data.name } });
+
+  const { error: movementError } = await supabaseAdmin.from("stock_movements").insert({
+    product_id: data.id,
+    movement_type: "in",
+    quantity,
+    balance_after: quantity,
+    reference_type: "product_create",
+    notes: "Initial stock recorded when product was created",
+    created_by: request.auth.user.id,
+  });
+
+  if (movementError) {
+    await supabaseAdmin.from("products").delete().eq("id", data.id);
+    throw new ApiError(400, movementError.message);
+  }
+
+  await supabaseAdmin.from("activity_logs").insert({
+    user_id: request.auth.user.id,
+    action: "product_created",
+    entity_type: "product",
+    entity_id: data.id,
+    details: { name: data.name, quantity },
+  });
+
   return sendData(response, data, "Product created", 201);
 });
 
 export const updateProduct = asyncHandler(async (request, response) => {
   const payload = cleanPayload(request.body);
-  const { data, error } = await supabaseAdmin.from("products").update(payload).eq("id", request.params.id).select().single();
+
+  const { data: previous, error: previousError } = await supabaseAdmin
+    .from("products")
+    .select("*")
+    .eq("id", request.params.id)
+    .single();
+  if (previousError || !previous) throw new ApiError(404, "محصول پیدا نه شو.");
+
+  const previousQuantity = Number(previous.quantity || 0);
+  const nextQuantity =
+    payload.quantity === undefined ? previousQuantity : Number(payload.quantity || 0);
+
+  if (nextQuantity < 0) throw new ApiError(400, "تعداد له صفر څخه کم نه شي کېدای.");
+
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq("id", request.params.id)
+    .select()
+    .single();
   if (error || !data) throw new ApiError(400, error?.message || "Product update failed");
-  await supabaseAdmin.from("activity_logs").insert({ user_id: request.auth.user.id, action: "product_updated", entity_type: "product", entity_id: data.id });
+
+  if (nextQuantity !== previousQuantity) {
+    const movementType = nextQuantity > previousQuantity ? "in" : "out";
+    const difference = Math.abs(nextQuantity - previousQuantity);
+
+    const { error: movementError } = await supabaseAdmin.from("stock_movements").insert({
+      product_id: data.id,
+      movement_type: movementType,
+      quantity: difference,
+      balance_after: nextQuantity,
+      reference_type: "product_edit",
+      notes: `Quantity edited from ${previousQuantity} to ${nextQuantity}`,
+      created_by: request.auth.user.id,
+    });
+
+    if (movementError) {
+      const rollback = {};
+      for (const key of Object.keys(payload)) rollback[key] = previous[key];
+      await supabaseAdmin.from("products").update(rollback).eq("id", request.params.id);
+      throw new ApiError(400, movementError.message);
+    }
+  }
+
+  await supabaseAdmin.from("activity_logs").insert({
+    user_id: request.auth.user.id,
+    action: "product_updated",
+    entity_type: "product",
+    entity_id: data.id,
+    details: {
+      previous_quantity: previousQuantity,
+      new_quantity: nextQuantity,
+    },
+  });
+
   return sendData(response, data, "Product updated");
 });
 

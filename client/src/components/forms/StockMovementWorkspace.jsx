@@ -25,6 +25,7 @@ export default function StockMovementWorkspace({ type }) {
   const { profile } = useAuth();
   const [searchParams] = useSearchParams();
   const requestedProductId = searchParams.get("product") || "";
+  const requestedWarehouseId = searchParams.get("warehouse") || "";
   const [products, setProducts] = useState([]);
   const [selectedId, setSelectedId] = useState(requestedProductId);
   const [quantity, setQuantity] = useState("");
@@ -60,6 +61,14 @@ export default function StockMovementWorkspace({ type }) {
   const MovementIcon = mode === "in" ? FiArrowDown : FiArrowUp;
   const isLocked = Boolean(requestedProductId && selectedProduct);
 
+  const goBack = () => {
+    if (requestedWarehouseId) {
+      navigate(`/warehouse?warehouse=${encodeURIComponent(requestedWarehouseId)}`);
+      return;
+    }
+    navigate(-1);
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     if (!selectedProduct) return toast.error("محصول انتخاب کړئ.");
@@ -93,7 +102,7 @@ export default function StockMovementWorkspace({ type }) {
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate(-1)}
+              onClick={goBack}
               className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-white/15 text-xl text-white transition hover:bg-white/25"
               aria-label="شاته"
               title="شاته"
@@ -170,7 +179,7 @@ export default function StockMovementWorkspace({ type }) {
               <button type="submit" disabled={saving || !selectedProduct || amount <= 0 || insufficient} className={`flex h-12 w-full items-center justify-center gap-2 rounded-xl px-8 font-black text-white shadow-lg disabled:opacity-50 ${mode === "in" ? "bg-gradient-to-l from-emerald-700 to-cyan-500" : "bg-gradient-to-l from-rose-700 to-orange-500"}`}>
                 <FiSave /> {saving ? "ثبتېږي..." : "ثبت"}
               </button>
-              <button type="button" onClick={() => navigate(-1)} className="secondary-button h-12 rounded-xl px-6">
+              <button type="button" onClick={goBack} className="secondary-button h-12 rounded-xl px-6">
                 <FiArrowRight /> شاته
               </button>
             </div>

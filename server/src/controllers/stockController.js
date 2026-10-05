@@ -58,7 +58,7 @@ const directMovement = (type) => asyncHandler(async (request, response) => {
   if (type === "out" && quantity > previous) throw new ApiError(400, "موجود سټاک کافي نه دی.");
   const next = type === "in" ? previous + quantity : previous - quantity;
 
-  const { error: updateError } = await supabaseAdmin.from("products").update({ quantity: next }).eq("id", productId);
+  const { error: updateError } = await supabaseAdmin.from("products").update({ quantity: next, updated_at: new Date().toISOString() }).eq("id", productId);
   if (updateError) throw new ApiError(400, updateError.message);
 
   const { data: movement, error } = await supabaseAdmin.from("stock_movements").insert({
@@ -91,18 +91,50 @@ export const moveStockOut = directMovement("out");
 
 export const listMovements = asyncHandler(async (request, response) => {
   const limit = Math.min(500, Math.max(1, Number(request.query.limit || 100)));
-  let query = supabaseAdmin.from("stock_movements").select("*,products(name,unit,warehouse_id)").order("created_at", { ascending: false }).limit(limit);
-  if (["in","out"].includes(request.query.type)) query = query.eq("movement_type", request.query.type);
-  if (request.query.product_id) query = query.eq("product_id", request.query.product_id);
+  let query = supabaseAdmin
+    .from("stock_movements")
+    .select("*,products(name,unit,warehouse_id)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (["in", "out"].includes(request.query.type)) {
+    query = query.eq("movement_type", request.query.type);
+  }
+  if (request.query.product_id) {
+    query = query.eq("product_id", request.query.product_id);
+  }
+
   const { data, error } = await query;
   if (error) throw new ApiError(400, error.message);
+
+  const creatorIds = [
+    ...new Set((data || []).map((row) => row.created_by).filter(Boolean)),
+  ];
+  const creatorNames = new Map();
+
+  if (creatorIds.length) {
+    const { data: creators } = await supabaseAdmin
+      .from("profiles")
+      .select("id,full_name,username")
+      .in("id", creatorIds);
+
+    for (const creator of creators || []) {
+      creatorNames.set(
+        creator.id,
+        creator.full_name || creator.username || "نامعلوم کارن",
+      );
+    }
+  }
+
   const rows = (data || []).map((row) => ({
     ...row,
     type: row.movement_type,
     product_name: row.products?.name || "نامعلوم جنس",
     warehouse_id: row.products?.warehouse_id || null,
-    date: row.created_at?.slice(0,10),
+    user_name: creatorNames.get(row.created_by) || "نامعلوم کارن",
+    date: row.created_at?.slice(0, 10),
     note: row.notes || "",
   }));
+
   return sendData(response, rows, "Movements loaded", 200, { total: rows.length });
 });

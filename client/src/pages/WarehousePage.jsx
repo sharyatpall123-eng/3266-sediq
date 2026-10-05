@@ -122,6 +122,7 @@ export default function WarehousePage() {
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [status, setStatus] = useState(searchParams.get("status") || "all");
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState("latest");
   const [historyType, setHistoryType] = useState("all");
   const [historyDate, setHistoryDate] = useState("all");
   const [modal, setModal] = useState(null);
@@ -158,13 +159,23 @@ export default function WarehousePage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, status]);
+  }, [search, status, sortBy]);
 
   useEffect(() => {
     if (searchParams.get("action") === "add" && canManage) {
       setModal("add");
     }
   }, [searchParams, canManage]);
+
+  useEffect(() => {
+    const warehouseId = searchParams.get("warehouse");
+    if (!warehouseId || warehouses.length === 0) return;
+
+    if (warehouses.some((item) => String(item.id) === String(warehouseId))) {
+      setActiveWarehouseId(warehouseId);
+      setDetailsOpen(true);
+    }
+  }, [searchParams, warehouses]);
 
   const products = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -188,10 +199,10 @@ export default function WarehousePage() {
         quantity: Number(movement.quantity || 0),
         date: movement.created_at || movement.date || new Date().toISOString(),
         reference: movement.reference_id || movement.id,
-        user: profile?.full_name || "Azizullah",
+        user: movement.user_name || movement.created_by_name || "نامعلوم کارن",
         warehouseId: movement.warehouse_id || null,
       })),
-    [profile?.full_name, stockMovements],
+    [stockMovements],
   );
 
   const movementTotals = useMemo(() => {
@@ -300,10 +311,44 @@ export default function WarehousePage() {
     });
   }, [activeWarehouseId, detailsOpen, historyDate, historyType, movements]);
 
+  const lastMovementAt = useMemo(() => {
+    const map = new Map();
+
+    movements.forEach((movement) => {
+      const timestamp = new Date(movement.date).getTime();
+      if (!Number.isFinite(timestamp)) return;
+      const current = map.get(movement.productId) || 0;
+      if (timestamp > current) map.set(movement.productId, timestamp);
+    });
+
+    return map;
+  }, [movements]);
+
   const detailProducts = useMemo(() => {
-    if (!detailsOpen || !activeWarehouseId) return products;
-    return products.filter((product) => product.warehouse_id === activeWarehouseId);
-  }, [activeWarehouseId, detailsOpen, products]);
+    const rows =
+      !detailsOpen || !activeWarehouseId
+        ? products
+        : products.filter((product) => product.warehouse_id === activeWarehouseId);
+
+    return [...rows].sort((a, b) => {
+      const aQuantity = Number(a.quantity || 0);
+      const bQuantity = Number(b.quantity || 0);
+
+      if (sortBy === "low") return aQuantity - bQuantity;
+      if (sortBy === "high") return bQuantity - aQuantity;
+
+      const aTime =
+        lastMovementAt.get(a.id) ||
+        new Date(a.updated_at || a.created_at || 0).getTime() ||
+        0;
+      const bTime =
+        lastMovementAt.get(b.id) ||
+        new Date(b.updated_at || b.created_at || 0).getTime() ||
+        0;
+
+      return bTime - aTime;
+    });
+  }, [activeWarehouseId, detailsOpen, lastMovementAt, products, sortBy]);
 
   const totalPages = Math.max(
     1,
@@ -357,6 +402,29 @@ export default function WarehousePage() {
       toast.error(getErrorMessage(error, "د ګودام معلومات ثبت نه شول."));
       throw error;
     }
+  };
+
+  const openProductEdit = (product) => {
+    setSelected(product);
+    setModal("edit");
+  };
+
+  const openWarehouseDetails = (warehouseId) => {
+    setActiveWarehouseId(warehouseId);
+    setDetailsOpen(true);
+    setPage(1);
+    const next = new URLSearchParams(searchParams);
+    next.set("warehouse", warehouseId);
+    setSearchParams(next, { replace: true });
+  };
+
+  const closeWarehouseDetails = () => {
+    setDetailsOpen(false);
+    setActiveWarehouseId(null);
+    setPage(1);
+    const next = new URLSearchParams(searchParams);
+    next.delete("warehouse");
+    setSearchParams(next, { replace: true });
   };
 
   const closeModal = () => {
@@ -502,9 +570,7 @@ export default function WarehousePage() {
                     stock={itemStats.stock}
                     lowStock={itemStats.low}
                     onView={() => {
-                      setActiveWarehouseId(warehouseItem.id);
-                      setDetailsOpen(true);
-                      setPage(1);
+                      openWarehouseDetails(warehouseItem.id);
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                     onEdit={() => openWarehouseEdit(warehouseItem)}
@@ -543,7 +609,7 @@ export default function WarehousePage() {
                   <button
                     key={warehouseItem.id}
                     type="button"
-                    onClick={() => { setActiveWarehouseId(warehouseItem.id); setDetailsOpen(true); setPage(1); }}
+                    onClick={() => openWarehouseDetails(warehouseItem.id)}
                     className="flex min-w-0 w-full items-center gap-3 rounded-2xl border border-slate-100 p-3 text-left transition hover:border-blue-200 hover:bg-blue-50"
                   >
                     <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-xl text-blue-700">
@@ -614,7 +680,7 @@ export default function WarehousePage() {
         <div className="flex items-start gap-3">
           <button
             type="button"
-            onClick={() => setDetailsOpen(false)}
+            onClick={closeWarehouseDetails}
             className="icon-button mt-0.5 size-10"
             aria-label="Back to warehouses"
           >
@@ -692,6 +758,17 @@ export default function WarehousePage() {
                 <option value="out">خلاص شوی</option>
               </select>
             </div>
+
+            <select
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+              aria-label="Sort products"
+            >
+              <option value="latest">وروستی بدلون</option>
+              <option value="low">کم مقدار</option>
+              <option value="high">ډېر مقدار</option>
+            </select>
 
             <button
               type="button"
@@ -778,18 +855,28 @@ export default function WarehousePage() {
                           <div dir="ltr" className="flex justify-center gap-2">
                             <button
                               type="button"
-                              onClick={() => navigate(`/stock-in?product=${product.id}`)}
+                              onClick={() => navigate(`/stock-in?product=${product.id}&warehouse=${activeWarehouseId || product.warehouse_id || ""}`)}
                               className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700"
                             >
                               <FiArrowDown /> In
                             </button>
                             <button
                               type="button"
-                              onClick={() => navigate(`/stock-out?product=${product.id}`)}
+                              onClick={() => navigate(`/stock-out?product=${product.id}&warehouse=${activeWarehouseId || product.warehouse_id || ""}`)}
                               className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 text-xs font-black text-white shadow-sm transition hover:bg-red-700"
                             >
                               <FiArrowUp /> Out
                             </button>
+                            {canManage ? (
+                              <button
+                                type="button"
+                                onClick={() => openProductEdit(product)}
+                                className="inline-flex size-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm transition hover:bg-blue-700"
+                                aria-label={`Edit ${product.name}`}
+                              >
+                                <FiEdit2 />
+                              </button>
+                            ) : null}
                             {canDelete ? (
                               <button
                                 type="button"
@@ -857,18 +944,36 @@ export default function WarehousePage() {
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => navigate(`/stock-in?product=${product.id}`)}
+                        onClick={() => navigate(`/stock-in?product=${product.id}&warehouse=${activeWarehouseId || product.warehouse_id || ""}`)}
                         className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-black text-white"
                       >
                         <FiArrowDown /> In
                       </button>
                       <button
                         type="button"
-                        onClick={() => navigate(`/stock-out?product=${product.id}`)}
+                        onClick={() => navigate(`/stock-out?product=${product.id}&warehouse=${activeWarehouseId || product.warehouse_id || ""}`)}
                         className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 text-sm font-black text-white"
                       >
                         <FiArrowUp /> Out
                       </button>
+                      {canManage ? (
+                        <button
+                          type="button"
+                          onClick={() => openProductEdit(product)}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-black text-white"
+                        >
+                          <FiEdit2 /> Edit
+                        </button>
+                      ) : null}
+                      {canDelete ? (
+                        <button
+                          type="button"
+                          onClick={() => remove(product)}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-800 text-sm font-black text-white"
+                        >
+                          <FiTrash2 /> Delete
+                        </button>
+                      ) : null}
                     </div>
                   </article>
                 );
@@ -879,7 +984,7 @@ export default function WarehousePage() {
 
         <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm font-medium text-slate-600">
-            Showing {products.length ? (page - 1) * PRODUCT_PAGE_SIZE + 1 : 0} to {Math.min(page * PRODUCT_PAGE_SIZE, products.length)} of {products.length} items
+            Showing {detailProducts.length ? (page - 1) * PRODUCT_PAGE_SIZE + 1 : 0} to {Math.min(page * PRODUCT_PAGE_SIZE, detailProducts.length)} of {detailProducts.length} items
           </p>
 
           <Pagination page={page} totalPages={totalPages} onChange={setPage} />
