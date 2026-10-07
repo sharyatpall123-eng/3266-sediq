@@ -38,7 +38,6 @@ import PageHeader from "../components/ui/PageHeader";
 import { getErrorMessage } from "../lib/api";
 import { reportService, representativeService } from "../Services/wmsService";
 import { formatDate, formatNumber } from "../utils/format";
-import { useAuth } from "../context/AuthContext";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -66,6 +65,17 @@ function compactNumber(value) {
   return number.toLocaleString();
 }
 
+function companyStockRows(response) {
+  return (response?.data || [])
+    .map((company) => ({
+      id: company.id,
+      name: company.name,
+      quantity: Math.max(0, Number(company.total_goods || 0)),
+    }))
+    .filter((company) => company.quantity > 0)
+    .sort((a, b) => b.quantity - a.quantity);
+}
+
 function csvDownload(filename, rows) {
   const csv = rows
     .map((row) =>
@@ -84,37 +94,32 @@ function csvDownload(filename, rows) {
 }
 
 export default function ReportsPage() {
-  const { profile } = useAuth();
-  const [filters, setFilters] = useState({
+  const initialFilters = {
     from: sixMonthsAgo(),
     to: today(),
-  });
-  const [appliedFilters, setAppliedFilters] = useState(filters);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  };
+  const initialReport = reportService.peek(initialFilters);
+  const initialCompanies = representativeService.peekList({ limit: 200 });
+  const [filters, setFilters] = useState(initialFilters);
+  const [appliedFilters, setAppliedFilters] = useState(initialFilters);
+  const [data, setData] = useState(() => initialReport);
+  const [loading, setLoading] = useState(() => !(initialReport && initialCompanies));
   const [refreshing, setRefreshing] = useState(false);
-  const [companyStock, setCompanyStock] = useState([]);
+  const [companyStock, setCompanyStock] = useState(() => companyStockRows(initialCompanies));
 
   const load = async (nextFilters = appliedFilters, silent = false) => {
     if (silent) setRefreshing(true);
-    else setLoading(true);
+    else if (!(reportService.peek(nextFilters) && representativeService.peekList({ limit: 200 }))) {
+      setLoading(true);
+    }
 
     try {
       const [result, companyResult] = await Promise.all([
         reportService.get(nextFilters),
-        representativeService.list({ limit: 200, actor: profile }),
+        representativeService.list({ limit: 200 }),
       ]);
       setData(result);
-      setCompanyStock(
-        (companyResult.data || [])
-          .map((company) => ({
-            id: company.id,
-            name: company.name,
-            quantity: Math.max(0, Number(company.total_goods || 0)),
-          }))
-          .filter((company) => company.quantity > 0)
-          .sort((a, b) => b.quantity - a.quantity),
-      );
+      setCompanyStock(companyStockRows(companyResult));
     } catch (error) {
       toast.error(getErrorMessage(error, "راپورونه ترلاسه نه شول."));
     } finally {
