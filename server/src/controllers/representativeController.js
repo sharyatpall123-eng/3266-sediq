@@ -312,21 +312,88 @@ async function loadRepresentative(id) {
 
 export const listRepresentatives = asyncHandler(async (request, response) => {
   const search = String(request.query.search || "").trim();
+  const limit = Math.min(500, Math.max(1, Number(request.query.limit || 100)));
+
   let query = supabaseAdmin
     .from("representatives")
     .select("*")
     .eq("is_active", true)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
   if (search) {
     query = query.or(
       `name.ilike.%${search}%,phone.ilike.%${search}%,address.ilike.%${search}%`,
     );
   }
+
   const { data, error } = await query;
   if (error) throw new ApiError(400, error.message);
-  const rows = await Promise.all(
-    (data || []).map(async (row) => (await loadRepresentative(row.id)).representative),
-  );
+
+  const representatives = data || [];
+  if (!representatives.length) {
+    return sendData(response, [], "Representatives loaded", 200, { total: 0 });
+  }
+
+  const ids = representatives.map((row) => row.id);
+  const [deliveriesResult, receiptsResult] = await Promise.all([
+    supabaseAdmin
+      .from("representative_deliveries")
+      .select("*")
+      .in("representative_id", ids)
+      .order("created_at", { ascending: false }),
+    supabaseAdmin
+      .from("representative_receipts")
+      .select("*")
+      .in("representative_id", ids)
+      .order("payment_date", { ascending: false }),
+  ]);
+
+  if (deliveriesResult.error) throw new ApiError(400, deliveriesResult.error.message);
+  if (receiptsResult.error) throw new ApiError(400, receiptsResult.error.message);
+
+  const deliveriesByRepresentative = new Map();
+  for (const row of deliveriesResult.data || []) {
+    if (!deliveriesByRepresentative.has(row.representative_id)) {
+      deliveriesByRepresentative.set(row.representative_id, []);
+    }
+    deliveriesByRepresentative.get(row.representative_id).push(row);
+  }
+
+  const receiptsByRepresentative = new Map();
+  for (const row of receiptsResult.data || []) {
+    if (!receiptsByRepresentative.has(row.representative_id)) {
+      receiptsByRepresentative.set(row.representative_id, []);
+    }
+    receiptsByRepresentative.get(row.representative_id).push(row);
+  }
+
+  const rows = representatives.map((representative) => {
+    const deliveries = deliveriesByRepresentative.get(representative.id) || [];
+    const receipts = receiptsByRepresentative.get(representative.id) || [];
+    const totalGoods = deliveries.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
+    const deliveredGoods = deliveries.reduce(
+      (sum, row) => sum + Number(row.delivered_quantity || 0),
+      0,
+    );
+    const totalAmount = deliveries.reduce(
+      (sum, row) => sum + Number(row.price || 0) + Number(row.rent_amount || 0),
+      0,
+    );
+
+    const baseRepresentative = {
+      ...representative,
+      total_goods: totalGoods,
+      delivered_goods: deliveredGoods,
+      remaining_goods: Math.max(0, totalGoods - deliveredGoods),
+      total_amount: totalAmount,
+      deliveries,
+      account_receipts: receipts,
+    };
+
+    return buildAccountData(baseRepresentative, deliveries, receipts).representative;
+  });
+
   return sendData(response, rows, "Representatives loaded", 200, { total: rows.length });
 });
 
