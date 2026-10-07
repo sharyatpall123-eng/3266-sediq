@@ -496,27 +496,16 @@ export const deleteRepresentative = asyncHandler(async (request, response) => {
     throw new ApiError(404, "استازی پیدا نه شو.");
   }
 
-  /*
-   * IMPORTANT:
-   * recycle_bin schema requires:
-   * - entity_type
-   * - entity_id
-   * - original_table
-   * - data
-   * - deleted_by as UUID
-   *
-   * Do not use label here and do not send deleted_by as an object.
-   */
+  // Save the complete record before deactivating it so Restore can recreate
+  // the exact representative state. deleted_by is kept as the user id; the
+  // Recycle Bin list resolves the display name for both UUID and JSONB schemas.
   const { data: recycleRow, error: recycleError } = await supabaseAdmin
     .from("recycle_bin")
     .insert({
       entity_type: "representative",
       entity_id: String(row.id),
-      original_table: "representatives",
-      data: {
-        ...row,
-        recycle_label: row.name,
-      },
+      label: row.name || "استازی",
+      data: row,
       deleted_by: request.auth?.user?.id || null,
     })
     .select("id")
