@@ -34,16 +34,17 @@ export default function RepresentativeGoodsDetailsPage() {
   const { id, goodsId } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  const [company, setCompany] = useState(null);
-  const [goods, setGoods] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const cachedDelivery = representativeService.peekDelivery?.(id, goodsId);
+  const [company, setCompany] = useState(() => cachedDelivery?.representative || null);
+  const [goods, setGoods] = useState(() => cachedDelivery?.delivery || null);
+  const [loading, setLoading] = useState(() => !cachedDelivery);
   const [uploading, setUploading] = useState(false);
   const [deliveryModal, setDeliveryModal] = useState(false);
   const [deliveryForm, setDeliveryForm] = useState({ quantity: "", date: today() });
   const [savingDelivery, setSavingDelivery] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!representativeService.peekDelivery?.(id, goodsId)) setLoading(true);
     try {
       const response = await representativeService.getDelivery(id, goodsId);
       setCompany(response?.representative || null);
