@@ -36,6 +36,11 @@ const clearAuth = () => {
 api.interceptors.request.use((config) => {
   const session = readSession();
   if (session?.access_token) config.headers.Authorization = `Bearer ${session.access_token}`;
+  const url = String(config?.url || "");
+  const isAuthEndpoint = url.includes("/auth/login") || url.includes("/auth/refresh");
+  if (!navigator.onLine && !isAuthEndpoint && !config?._syncReplay) {
+    return Promise.reject({ config, message: "OFFLINE", isOffline: true });
+  }
   return config;
 });
 
