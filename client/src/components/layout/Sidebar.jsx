@@ -24,8 +24,10 @@ import {
 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import {
+  debtorService,
   notificationService,
   representativeService,
+  settingsService,
   warehouseService,
 } from "../../Services/wmsService";
 import { can } from "../../utils/permissions";
@@ -217,6 +219,14 @@ export default function Sidebar({
     }
   }, [loadSidebarData, location.pathname, location.search]);
 
+  // Warm the debtors overview in memory after authentication so opening the
+  // page feels instant instead of waiting for its first network round-trip.
+  useEffect(() => {
+    if (canDebtors) {
+      void debtorService.prefetchList({ search: "", limit: 100 });
+    }
+  }, [canDebtors]);
+
   useEffect(() => {
     const active = routeGroup(location.pathname, location.search);
     if (active) setOpenGroup(active);
@@ -267,6 +277,14 @@ export default function Sidebar({
 
     if (next === "warehouse" || next === "companies") {
       await loadSidebarData(next);
+    }
+
+    if (next === "debtors") {
+      void debtorService.prefetchList({ search: "", limit: 100 });
+    }
+
+    if (next === "users" && canUsers) {
+      void settingsService.prefetchUsers?.();
     }
 
     if (next === "notifications") {
