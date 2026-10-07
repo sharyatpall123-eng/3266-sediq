@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   FiArchive,
@@ -132,6 +132,11 @@ export default function Sidebar({
   const [desktopMode, setDesktopMode] = useState(() =>
     usesPermanentSidebar(),
   );
+  const loadedAtRef = useRef({
+    warehouse: 0,
+    companies: 0,
+    notifications: 0,
+  });
 
   const visualCompact = compact && desktopMode;
 
@@ -153,40 +158,51 @@ export default function Sidebar({
   const canSettings = can(profile, "settings.view");
   const canUsers = can(profile, "users.manage");
 
-  const loadSidebarData = useCallback(async () => {
+  const loadSidebarData = useCallback(async (target, force = false) => {
     const jobs = [];
+    const now = Date.now();
+    const freshFor = 30_000;
+    const needsLoad = (key) =>
+      force || now - Number(loadedAtRef.current[key] || 0) > freshFor;
 
-    if (canWarehouse) {
+    if (target === "warehouse" && canWarehouse && needsLoad("warehouse")) {
       jobs.push(
         warehouseService
           .list({ limit: 100 })
-          .then((response) => setWarehouses(response?.data || []))
-          .catch(() => setWarehouses([])),
+          .then((response) => {
+            setWarehouses(response?.data || []);
+            loadedAtRef.current.warehouse = Date.now();
+          })
+          .catch(() => {}),
       );
     }
 
-    if (canCompanies) {
+    if (target === "companies" && canCompanies && needsLoad("companies")) {
       jobs.push(
         representativeService
           .list({ limit: 100 })
-          .then((response) => setCompanies(response?.data || []))
-          .catch(() => setCompanies([])),
+          .then((response) => {
+            setCompanies(response?.data || []);
+            loadedAtRef.current.companies = Date.now();
+          })
+          .catch(() => {}),
       );
     }
 
-    if (canNotifications) {
+    if (target === "notifications" && canNotifications && needsLoad("notifications")) {
       jobs.push(
         notificationService
-          .list({ limit: 100 })
-          .then((response) =>
+          .list({ unread: true, limit: 1 })
+          .then((response) => {
             setUnreadCount(
               Number(
                 response?.meta?.unread ??
                   (response?.data || []).filter((item) => !item.is_read).length,
               ),
-            ),
-          )
-          .catch(() => setUnreadCount(0)),
+            );
+            loadedAtRef.current.notifications = Date.now();
+          })
+          .catch(() => {}),
       );
     }
 
@@ -194,8 +210,12 @@ export default function Sidebar({
   }, [canCompanies, canNotifications, canWarehouse]);
 
   useEffect(() => {
-    loadSidebarData();
-  }, [loadSidebarData]);
+    loadSidebarData("notifications");
+    const active = routeGroup(location.pathname, location.search);
+    if (active === "warehouse" || active === "companies") {
+      loadSidebarData(active);
+    }
+  }, [loadSidebarData, location.pathname, location.search]);
 
   useEffect(() => {
     const active = routeGroup(location.pathname, location.search);
@@ -246,7 +266,11 @@ export default function Sidebar({
     setOpenGroup(next);
 
     if (next === "warehouse" || next === "companies") {
-      await loadSidebarData();
+      await loadSidebarData(next);
+    }
+
+    if (next === "notifications") {
+      await loadSidebarData("notifications", true);
     }
   };
 
