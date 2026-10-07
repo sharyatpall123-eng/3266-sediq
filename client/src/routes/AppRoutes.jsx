@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import MainLayout from "../components/layout/MainLayout";
 import Loading from "../components/ui/Loading";
@@ -36,6 +36,25 @@ function Lazy({ children }) {
 }
 
 export default function AppRoutes() {
+  useEffect(() => {
+    const preload = () => {
+      Promise.allSettled([
+        import("../pages/WarehousePage"),
+        import("../pages/DebtorsPage"),
+        import("../pages/RepresentativesPage"),
+        import("../pages/ReportsPage"),
+      ]);
+    };
+
+    if ("requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(preload, { timeout: 2500 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+
+    const timer = window.setTimeout(preload, 1500);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <Routes>
       <Route path="/login" element={<Lazy><LoginPage /></Lazy>} />
