@@ -867,6 +867,15 @@ export default function WarehousePage() {
                             >
                               <FiArrowUp /> Out
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/warehouse/products/${product.id}/history`)}
+                              className="inline-flex size-9 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm transition hover:bg-violet-700"
+                              aria-label={`View ${product.name} stock history`}
+                              title="View History"
+                            >
+                              <FiEye />
+                            </button>
                             {canManage ? (
                               <button
                                 type="button"
@@ -941,39 +950,28 @@ export default function WarehousePage() {
                       />
                     </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="mt-4 grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => navigate(`/stock-in?product=${product.id}&warehouse=${activeWarehouseId || product.warehouse_id || ""}`)}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-black text-white"
+                        className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-emerald-600 text-[11px] font-black text-white"
                       >
                         <FiArrowDown /> In
                       </button>
                       <button
                         type="button"
                         onClick={() => navigate(`/stock-out?product=${product.id}&warehouse=${activeWarehouseId || product.warehouse_id || ""}`)}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 text-sm font-black text-white"
+                        className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-red-600 text-[11px] font-black text-white"
                       >
                         <FiArrowUp /> Out
                       </button>
-                      {canManage ? (
-                        <button
-                          type="button"
-                          onClick={() => openProductEdit(product)}
-                          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-black text-white"
-                        >
-                          <FiEdit2 /> Edit
-                        </button>
-                      ) : null}
-                      {canDelete ? (
-                        <button
-                          type="button"
-                          onClick={() => remove(product)}
-                          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-800 text-sm font-black text-white"
-                        >
-                          <FiTrash2 /> Delete
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/warehouse/products/${product.id}/history`)}
+                        className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-blue-600 text-[11px] font-black text-white"
+                      >
+                        <FiEye /> View
+                      </button>
                     </div>
                   </article>
                 );
