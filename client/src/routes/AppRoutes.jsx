@@ -4,6 +4,7 @@ import MainLayout from "../components/layout/MainLayout";
 import Loading from "../components/ui/Loading";
 import ProtectedRoute from "./ProtectedRoute";
 import PermissionRoute from "./PermissionRoute";
+import { useAuth } from "../context/AuthContext";
 
 const LoginPage = lazy(() => import("../pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("../pages/ResetPasswordPage"));
@@ -37,14 +38,56 @@ function Lazy({ children }) {
 }
 
 export default function AppRoutes() {
+  const { profile } = useAuth();
+
   useEffect(() => {
-    const preload = () => {
-      Promise.allSettled([
+    if (!profile?.id) return undefined;
+    const preload = async () => {
+      const modules = Promise.allSettled([
         import("../pages/WarehousePage"),
+        import("../pages/StockInPage"),
+        import("../pages/StockOutPage"),
         import("../pages/DebtorsPage"),
+        import("../pages/DebtorDetailsPage"),
         import("../pages/RepresentativesPage"),
+        import("../pages/RepresentativeDetailsPage"),
+        import("../pages/RepresentativeGoodsDetailsPage"),
+        import("../pages/RepresentativeAccountPage"),
         import("../pages/ReportsPage"),
+        import("../pages/NotificationsPage"),
+        import("../pages/UsersPage"),
+        import("../pages/SettingsPage"),
+        import("../pages/ProductStockHistoryPage"),
       ]);
+
+      const servicesPromise = import("../Services/wmsService");
+      const services = await servicesPromise;
+
+      await Promise.allSettled([
+        services.dashboardService.prefetch?.(),
+        services.productService.prefetchList?.({ status: "all", page: 1, limit: 500 }),
+        services.warehouseService.prefetchList?.({ limit: 500 }),
+        services.debtorService.prefetchList?.({ search: "", limit: 100 }),
+        services.representativeService.prefetchList?.({ search: "", limit: 100 }),
+        services.notificationService.prefetchList?.({ limit: 100 }),
+        services.settingsService.prefetch?.(),
+        services.settingsService.prefetchAccess?.(),
+      ]);
+
+      const now = new Date();
+      const fromDate = new Date(now);
+      fromDate.setMonth(fromDate.getMonth() - 5);
+      fromDate.setDate(1);
+      const from = fromDate.toISOString().slice(0, 10);
+      const to = now.toISOString().slice(0, 10);
+
+      await Promise.allSettled([
+        services.reportService.prefetch?.({ from, to }),
+        services.representativeService.prefetchList?.({ limit: 200 }),
+        services.stockService.prefetchMovementHistory?.({ limit: 500 }),
+      ]);
+
+      await modules;
     };
 
     if ("requestIdleCallback" in window) {
@@ -54,7 +97,7 @@ export default function AppRoutes() {
 
     const timer = window.setTimeout(preload, 1500);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [profile?.id]);
 
   return (
     <Routes>
