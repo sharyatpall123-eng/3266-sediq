@@ -16,13 +16,7 @@ import {
 } from "recharts";
 import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
-import {
-  dashboardService,
-  productService,
-  representativeService,
-  stockService,
-  warehouseService,
-} from "../Services/wmsService";
+import { dashboardService } from "../Services/wmsService";
 import { formatNumber } from "../utils/format";
 
 const fallbackSummary = {
@@ -988,94 +982,79 @@ export default function DashboardPage() {
     let active = true;
 
     const loadDashboard = async () => {
-      const [warehousesR, productsR, movementsR, representativesR, dashboardR] = await Promise.allSettled([
-        warehouseService.list(),
-        productService.list({ limit: 500 }),
-        stockService.movementHistory({ limit: 500 }),
-        representativeService.list({ limit: 100 }),
-        dashboardService.get(),
-      ]);
+      try {
+        const dashboard = await dashboardService.get();
+        if (!active) return;
 
-      if (!active) return;
+        setSummary({
+          ...fallbackSummary,
+          ...(dashboard?.summary || {}),
+        });
 
-      const warehouses = warehousesR.status === "fulfilled" && Array.isArray(warehousesR.value?.data)
-        ? warehousesR.value.data
-        : [];
-      const products = productsR.status === "fulfilled" && Array.isArray(productsR.value?.data)
-        ? productsR.value.data
-        : [];
-      const movements = movementsR.status === "fulfilled" && Array.isArray(movementsR.value?.data)
-        ? movementsR.value.data
-        : [];
-      const representatives = representativesR.status === "fulfilled" && Array.isArray(representativesR.value?.data)
-        ? representativesR.value.data
-        : [];
-      const extra = dashboardR.status === "fulfilled" ? dashboardR.value || {} : {};
-
-      const stockIn = movements
-        .filter((row) => String(row.type || row.movement_type || "").toLowerCase() === "in")
-        .reduce((sum, row) => sum + Number(row.quantity || 0), 0);
-      const stockOut = movements
-        .filter((row) => String(row.type || row.movement_type || "").toLowerCase() === "out")
-        .reduce((sum, row) => sum + Number(row.quantity || 0), 0);
-      const netBalance = products.reduce((sum, row) => sum + Number(row.quantity || 0), 0);
-      const lowStock = products.filter(
-        (row) => Number(row.quantity || 0) <= Number(row.min_stock || 0),
-      ).length;
-
-      setSummary({
-        totalWarehouses: warehouses.length,
-        stockIn,
-        stockOut,
-        netBalance,
-        lowStock,
-      });
-
-      const chartRows = representatives
-        .map((company, index) => ({
-          name: company.name,
-          value: Math.max(
-            0,
-            Number(
-              company.remaining_goods ??
-              (Number(company.total_goods || 0) - Number(company.delivered_goods || 0)),
-            ),
-          ),
+        const chartRows = (Array.isArray(dashboard?.companyDistribution)
+          ? dashboard.companyDistribution
+          : []
+        ).map((company, index) => ({
+          ...company,
           color: companyPalette[index % companyPalette.length].color,
           dotClass: companyPalette[index % companyPalette.length].dotClass,
-        }))
-        .filter((company) => company.value > 0)
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 6);
+        }));
 
-      setCompanyDistribution(chartRows);
-      setCreditComparison(Array.isArray(extra.creditComparison) ? extra.creditComparison : []);
+        setCompanyDistribution(chartRows);
+        setCreditComparison(
+          Array.isArray(dashboard?.creditComparison)
+            ? dashboard.creditComparison
+            : [],
+        );
 
-      const liveActivities = movements.slice(0, 8).map((item, index) => {
-        const type = String(item.type || item.movement_type || "").toLowerCase();
-        const title = type === "out" ? "Stock Out" : type === "in" ? "Stock In" : "Stock Movement";
-        const meta = activityIconMeta(title);
-        return {
-          id: item.id || `movement-${index}`,
-          title,
-          subtitle: `${item.product_name || item.products?.name || "Product"} • ${Number(item.quantity || 0)} ${item.products?.unit || ""}`.trim(),
-          time: formatRelativeTime(item.created_at || item.date),
-          icon: meta.icon,
-          iconClass: meta.iconClass,
-        };
-      });
+        const liveActivities = (
+          Array.isArray(dashboard?.recentMovements)
+            ? dashboard.recentMovements
+            : []
+        ).map((item, index) => {
+          const type = String(item.type || item.movement_type || "").toLowerCase();
+          const title =
+            type === "out"
+              ? "Stock Out"
+              : type === "in"
+                ? "Stock In"
+                : "Stock Movement";
+          const meta = activityIconMeta(title);
 
-      setActivities(
-        liveActivities.length
-          ? liveActivities
-          : [{
-              id: "no-activity",
-              title: "No recent activity",
-              subtitle: "Stock activity will appear here",
-              time: "Now",
-              ...activityIconMeta("stock"),
-            }],
-      );
+          return {
+            id: item.id || `movement-${index}`,
+            title,
+            subtitle: `${item.product_name || "Product"} • ${Number(item.quantity || 0)} ${item.unit || ""}`.trim(),
+            time: formatRelativeTime(item.created_at || item.date),
+            icon: meta.icon,
+            iconClass: meta.iconClass,
+          };
+        });
+
+        setActivities(
+          liveActivities.length
+            ? liveActivities
+            : [{
+                id: "no-activity",
+                title: "No recent activity",
+                subtitle: "Stock activity will appear here",
+                time: "Now",
+                ...activityIconMeta("stock"),
+              }],
+        );
+      } catch {
+        if (!active) return;
+        setSummary(fallbackSummary);
+        setCompanyDistribution([]);
+        setCreditComparison([]);
+        setActivities([{
+          id: "no-activity",
+          title: "No recent activity",
+          subtitle: "Stock activity will appear here",
+          time: "Now",
+          ...activityIconMeta("stock"),
+        }]);
+      }
     };
 
     loadDashboard();
