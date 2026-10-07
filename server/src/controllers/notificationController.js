@@ -17,16 +17,20 @@ export const listNotifications = asyncHandler(async (request, response) => {
     query = query.eq("is_read", false);
   }
 
-  const { data, error } = await query;
+  const [listResult, countResult] = await Promise.all([
+    query,
+    supabaseAdmin
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("is_read", false),
+  ]);
+
+  const { data, error } = listResult;
+  const { count } = countResult;
 
   if (error) {
     throw new ApiError(400, error.message);
   }
-
-  const { count } = await supabaseAdmin
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("is_read", false);
 
   return sendData(
     response,
