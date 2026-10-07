@@ -33,12 +33,14 @@ function money(value, currency = "USD") {
 export default function RepresentativeAccountReportPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [account, setAccount] = useState(null);
-  const [company, setCompany] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const cachedAccount = representativeService.peekAccount?.(id);
+  const cachedSettings = settingsService.peek?.();
+  const [account, setAccount] = useState(() => cachedAccount || null);
+  const [company, setCompany] = useState(() => cachedSettings?.company || null);
+  const [loading, setLoading] = useState(() => !cachedAccount);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!representativeService.peekAccount?.(id)) setLoading(true);
     try {
       const [accountResult, settingsResult] = await Promise.all([
         representativeService.account(id),
