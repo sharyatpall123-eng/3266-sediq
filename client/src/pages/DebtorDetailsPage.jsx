@@ -39,15 +39,15 @@ import { jsPDF } from "jspdf";
 const MARKET_STORAGE_KEY = "wms-debtor-markets";
 
 const DEFAULT_COMPANY = {
-  company_name: "WMS Pro",
+  company_name: "AZI SYSTEM",
   logo_url: "",
   address: "",
   phone: "",
   email: "",
-  report_title: "د قرضدار رسمي حسابي راپور",
+  report_title: "د مشتري رسمي حسابي راپور",
   document_prefix: "DB",
   footer_text: "مننه چې زمونږ سره حساب کوئ",
-  debtor_signature_label: "د قرضدار امضا",
+  debtor_signature_label: "د د مشتري امضا",
   accountant_signature_label: "د محاسب امضا",
   stamp_label: "مهر او تایید",
   whatsapp_greeting: "السلام علیکم",
@@ -64,9 +64,11 @@ export default function DebtorDetailsPage() {
   const { id } = useParams();
   const historyRef = useRef(null);
 
-  const [data, setData] = useState(null);
-  const [company, setCompany] = useState(DEFAULT_COMPANY);
-  const [loading, setLoading] = useState(true);
+  const cachedDebtor = debtorService.peek?.(id);
+  const cachedSettings = settingsService.peek?.();
+  const [data, setData] = useState(() => cachedDebtor || null);
+  const [company, setCompany] = useState(() => ({ ...DEFAULT_COMPANY, ...(cachedSettings?.company || {}) }));
+  const [loading, setLoading] = useState(() => !cachedDebtor);
   const [showPayment, setShowPayment] = useState(false);
   const [showBalance, setShowBalance] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -83,7 +85,7 @@ export default function DebtorDetailsPage() {
   const [whatsappConfirm, setWhatsAppConfirm] = useState(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!debtorService.peek?.(id)) setLoading(true);
     try {
       const [debtorResult, settingsResult] = await Promise.all([
         debtorService.get(id),
@@ -1242,8 +1244,8 @@ function FormalReport({
             </div>
 
             <div className="min-w-0 text-center">
-              <h2 className="break-words text-2xl font-black text-blue-900 sm:text-4xl">{company.company_name || "WMS Pro"}</h2>
-              <p className="mt-1 break-words font-bold text-slate-600">{company.report_title || "د قرضدار رسمي حسابي راپور"}</p>
+              <h2 className="break-words text-2xl font-black text-blue-900 sm:text-4xl">{company.company_name || "AZI SYSTEM"}</h2>
+              <p className="mt-1 break-words font-bold text-slate-600">{company.report_title || "د مشتري رسمي حسابي راپور"}</p>
               <div className="mt-3 space-y-1 text-xs font-semibold text-slate-500 sm:text-sm">
                 <p className="break-words">پته: {company.address || "—"}</p>
                 <p className="break-words">تماس: {company.phone || "—"}{company.email ? ` | ${company.email}` : ""}</p>
@@ -1699,7 +1701,7 @@ async function createReceiptCardBlob({ company, receipt }) {
   ctx.textAlign = "right";
   ctx.fillStyle = "#ffffff";
   ctx.font = "900 46px Arial, Tahoma, sans-serif";
-  ctx.fillText(company.company_name || "WMS Pro", 790, 150);
+  ctx.fillText(company.company_name || "AZI SYSTEM", 790, 150);
   ctx.font = "700 25px Arial, Tahoma, sans-serif";
   ctx.fillStyle = "#dbeafe";
   ctx.fillText(company.address || "", 790, 198);
@@ -1815,7 +1817,7 @@ async function createWhatsAppCardBlob({ company, customer, totals, currency }) {
   ctx.textAlign = "right";
   ctx.fillStyle = "#ffffff";
   ctx.font = "900 48px Arial, Tahoma, sans-serif";
-  ctx.fillText(company.company_name || "WMS Pro", 790, 155);
+  ctx.fillText(company.company_name || "AZI SYSTEM ", 790, 155);
   ctx.font = "700 27px Arial, Tahoma, sans-serif";
   ctx.fillStyle = "#dbeafe";
   ctx.fillText(company.address || "", 790, 205);
@@ -1974,10 +1976,10 @@ async function createReportCanvas({ company, customer, totals, payments, balance
   ctx.fillStyle = "#153d9f";
   ctx.font = "900 54px Arial, Tahoma, sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(company.company_name || "WMS Pro", width / 2, 130);
+  ctx.fillText(company.company_name || "AZI SYSTEM", width / 2, 130);
   ctx.font = "800 30px Arial, Tahoma, sans-serif";
   ctx.fillStyle = "#334155";
-  ctx.fillText(company.report_title || "د قرضدار رسمي حسابي راپور", width / 2, 178);
+  ctx.fillText(company.report_title || "د مشتري رسمي حسابي راپور", width / 2, 178);
   ctx.font = "700 22px Arial, Tahoma, sans-serif";
   ctx.fillStyle = "#64748b";
   ctx.fillText(company.address || "—", width / 2, 218);
