@@ -155,14 +155,17 @@ export default function DebtorsPage() {
   const canManage = can(profile, "debtors.manage");
   const canViewTotalDebt = can(profile, "debtors.view_total");
   const [searchParams, setSearchParams] = useSearchParams();
-  const [debtors, setDebtors] = useState([]);
-  const [summary, setSummary] = useState({
-    AFN: 0,
-    USD: 0,
-    total: 0,
-    overdue: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const initialResponse = debtorService.peekList({ search: "", limit: 100 });
+  const [debtors, setDebtors] = useState(() => initialResponse?.data || []);
+  const [summary, setSummary] = useState(() =>
+    initialResponse?.meta?.summary || {
+      AFN: 0,
+      USD: 0,
+      total: 0,
+      overdue: 0,
+    },
+  );
+  const [loading, setLoading] = useState(() => !initialResponse);
   const [view, setView] = useState("grid");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("amount_desc");
@@ -173,7 +176,7 @@ export default function DebtorsPage() {
   const [alertOnly, setAlertOnly] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!debtorService.peekList({ search, limit: 100 })) setLoading(true);
     try {
       const response = await debtorService.list({ search, limit: 100 });
       setDebtors(response.data || []);
@@ -193,9 +196,12 @@ export default function DebtorsPage() {
   }, [search]);
 
   useEffect(() => {
-    const timer = setTimeout(load, 250);
+    // Do not add an artificial delay to the initial debtors view. Only typed
+    // searches are debounced so the normal overview can paint immediately.
+    const delay = search.trim() ? 250 : 0;
+    const timer = setTimeout(load, delay);
     return () => clearTimeout(timer);
-  }, [load]);
+  }, [load, search]);
 
   useEffect(() => {
     if (searchParams.get("action") === "add" && canManage) {
@@ -848,6 +854,9 @@ function DebtorCard({ debtor, onEdit, canManage, isAlert }) {
 
           <Link
             to={`/debtors/${debtor.id}`}
+            onMouseEnter={() => void debtorService.prefetch(debtor.id)}
+            onFocus={() => void debtorService.prefetch(debtor.id)}
+            onTouchStart={() => void debtorService.prefetch(debtor.id)}
             className="flex h-9 items-center justify-center gap-1.5 rounded-xl bg-white px-3 text-xs font-black text-blue-700 shadow-md transition hover:bg-blue-50"
           >
             <span>View Details</span>
@@ -903,7 +912,7 @@ function DebtorTable({ debtors, onEdit, canManage }) {
               </div>
 
               <div className={`grid gap-2 border-t border-slate-100 p-3 ${canManage ? "grid-cols-[1fr_50px]" : "grid-cols-1"}`}>
-                <Link to={`/debtors/${debtor.id}`} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-xs font-black text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700">
+                <Link to={`/debtors/${debtor.id}`} onMouseEnter={() => void debtorService.prefetch(debtor.id)} onFocus={() => void debtorService.prefetch(debtor.id)} onTouchStart={() => void debtorService.prefetch(debtor.id)} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-xs font-black text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700">
                   <span>View</span><FiEye />
                 </Link>
                 {canManage ? (
@@ -958,7 +967,7 @@ function DebtorTable({ debtors, onEdit, canManage }) {
                     <td className="border-b border-l border-slate-200 px-4 py-3 text-center text-xs font-semibold text-slate-700">{formatDate(debtor.last_payment_date)}</td>
                     <td className="border-b border-slate-200 px-4 py-3">
                       <div className="flex justify-center gap-2">
-                        <Link className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-3 text-xs font-black text-blue-700 shadow-sm transition hover:bg-blue-50" to={`/debtors/${debtor.id}`}>
+                        <Link className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-3 text-xs font-black text-blue-700 shadow-sm transition hover:bg-blue-50" to={`/debtors/${debtor.id}`} onMouseEnter={() => void debtorService.prefetch(debtor.id)} onFocus={() => void debtorService.prefetch(debtor.id)} onTouchStart={() => void debtorService.prefetch(debtor.id)}>
                           <span>View</span><FiEye />
                         </Link>
                         {canManage ? (
