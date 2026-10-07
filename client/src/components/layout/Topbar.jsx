@@ -3,6 +3,8 @@ import { FiBell, FiMenu, FiSearch, FiX } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { notificationService } from "../../Services/wmsService";
+import { queuedCount } from "../../lib/offlineStore";
+import { syncOfflineQueue } from "../../lib/api";
 
 export default function Topbar({ onMenu }) {
   const navigate = useNavigate();
@@ -10,6 +12,9 @@ export default function Topbar({ onMenu }) {
   const [query, setQuery] = useState("");
   const [unread, setUnread] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [online, setOnline] = useState(() => navigator.onLine);
+  const [pendingSync, setPendingSync] = useState(0);
+  const [syncing, setSyncing] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -24,6 +29,30 @@ export default function Topbar({ onMenu }) {
     if (searchOpen) inputRef.current?.focus();
   }, [searchOpen]);
 
+  useEffect(() => {
+    let active = true;
+    const refreshCount = () => queuedCount().then((count) => active && setPendingSync(count)).catch(() => {});
+    const onOnline = () => { setOnline(true); refreshCount(); syncOfflineQueue().catch(() => {}); };
+    const onOffline = () => setOnline(false);
+    const onQueue = () => refreshCount();
+    const onSync = (event) => {
+      setSyncing(Boolean(event.detail?.syncing));
+      refreshCount();
+    };
+    refreshCount();
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("wms-offline-queue-changed", onQueue);
+    window.addEventListener("wms-sync-state", onSync);
+    return () => {
+      active = false;
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("wms-offline-queue-changed", onQueue);
+      window.removeEventListener("wms-sync-state", onSync);
+    };
+  }, []);
+
   const submit = (event) => {
     event.preventDefault();
     const value = query.trim();
@@ -37,6 +66,9 @@ export default function Topbar({ onMenu }) {
       <button className="icon-button size-10 xl:hidden" onClick={onMenu} aria-label="Open menu"><FiMenu /></button>
 
       <div className="flex min-w-0 items-center gap-2">
+        <button type="button" onClick={() => online && syncOfflineQueue().catch(() => {})} className={`rounded-xl px-2.5 py-2 text-[10px] font-black ${online ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`} title={pendingSync ? `${pendingSync} بدلونونه Sync ته منتظر دي` : "د اتصال حالت"}>
+          {syncing ? "Syncing…" : online ? (pendingSync ? `Online • ${pendingSync} pending` : "Online • Synced") : (pendingSync ? `Offline • ${pendingSync} pending` : "Offline")}
+        </button>
         <Link to="/settings" className="flex items-center gap-2 rounded-2xl px-1 py-1 transition hover:bg-white/60">
           <div className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-sky-500 text-base font-black text-white shadow-lg shadow-brand-600/20">{initials}</div>
           <div className="hidden md:block">
