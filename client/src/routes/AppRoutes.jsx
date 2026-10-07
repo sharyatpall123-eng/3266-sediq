@@ -9,6 +9,7 @@ const LoginPage = lazy(() => import("../pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("../pages/ResetPasswordPage"));
 const DashboardPage = lazy(() => import("../pages/DashboardPage"));
 const WarehousePage = lazy(() => import("../pages/WarehousePage"));
+const ProductStockHistoryPage = lazy(() => import("../pages/ProductStockHistoryPage"));
 const StockInPage = lazy(() => import("../pages/StockInPage"));
 const StockOutPage = lazy(() => import("../pages/StockOutPage"));
 const DebtorsPage = lazy(() => import("../pages/DebtorsPage"));
@@ -68,6 +69,7 @@ export default function AppRoutes() {
       >
         <Route index element={<Lazy><DashboardPage /></Lazy>} />
         <Route path="warehouse" element={<Lazy><WarehousePage /></Lazy>} />
+        <Route path="warehouse/products/:productId/history" element={<Lazy><ProductStockHistoryPage /></Lazy>} />
         <Route path="stock-in" element={<PermissionRoute permission="stock.in"><Lazy><StockInPage /></Lazy></PermissionRoute>} />
         <Route path="stock-out" element={<PermissionRoute permission="stock.out"><Lazy><StockOutPage /></Lazy></PermissionRoute>} />
         <Route path="debtors" element={<Lazy><DebtorsPage /></Lazy>} />
