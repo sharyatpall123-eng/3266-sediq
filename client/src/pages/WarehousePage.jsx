@@ -115,42 +115,56 @@ export default function WarehousePage() {
   const canDelete = can(profile, "warehouse.delete");
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [allProducts, setAllProducts] = useState([]);
-  const [stockMovements, setStockMovements] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const initialProducts = productService.peekList({ status: "all", page: 1, limit: 500 });
+  const initialWarehouses = warehouseService.peekList({ limit: 500 });
+  const initialMovements = stockService.peekMovementHistory({ limit: 500 });
+  const [allProducts, setAllProducts] = useState(() => initialProducts?.data || []);
+  const [stockMovements, setStockMovements] = useState(() => initialMovements?.data || []);
+  const [loading, setLoading] = useState(() => !(initialProducts && initialWarehouses));
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [status, setStatus] = useState(searchParams.get("status") || "all");
   const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState("latest");
+  const [showAllProducts, setShowAllProducts] = useState(false);
   const [historyType, setHistoryType] = useState("all");
   const [historyDate, setHistoryDate] = useState("all");
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [warehouses, setWarehouses] = useState([]);
-  const [warehouseSearch, setWarehouseSearch] = useState("");
+  const [warehouses, setWarehouses] = useState(() => initialWarehouses?.data || []);
   const [warehouseModal, setWarehouseModal] = useState(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const [activeWarehouseId, setActiveWarehouseId] = useState(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const hasWarmOverview =
+      productService.peekList({ status: "all", page: 1, limit: 500 }) &&
+      warehouseService.peekList({ limit: 500 });
+
+    if (!hasWarmOverview) setLoading(true);
+
+    // Movement history is useful for totals/history, but it should not block the
+    // first warehouse paint. Start it in parallel and let the page render as
+    // soon as the product and warehouse lists are ready.
+    const movementsPromise = stockService
+      .movementHistory({ limit: 500 })
+      .then((response) => setStockMovements(response.data || []))
+      .catch(() => {});
 
     try {
-      const [allResponse, movementsResponse, warehouseResponse] = await Promise.all([
+      const [allResponse, warehouseResponse] = await Promise.all([
         productService.list({ status: "all", page: 1, limit: 500 }),
-        stockService.movementHistory({ limit: 500 }),
         warehouseService.list({ limit: 500 }),
       ]);
 
       setAllProducts(allResponse.data || []);
-      setStockMovements(movementsResponse.data || []);
       setWarehouses(warehouseResponse.data || []);
     } catch (error) {
       toast.error(getErrorMessage(error, "د ګدام معلومات ترلاسه نه شول."));
     } finally {
       setLoading(false);
     }
+
+    void movementsPromise;
   }, []);
 
   useEffect(() => {
@@ -159,23 +173,13 @@ export default function WarehousePage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, status, sortBy]);
+  }, [search, status]);
 
   useEffect(() => {
     if (searchParams.get("action") === "add" && canManage) {
       setModal("add");
     }
   }, [searchParams, canManage]);
-
-  useEffect(() => {
-    const warehouseId = searchParams.get("warehouse");
-    if (!warehouseId || warehouses.length === 0) return;
-
-    if (warehouses.some((item) => String(item.id) === String(warehouseId))) {
-      setActiveWarehouseId(warehouseId);
-      setDetailsOpen(true);
-    }
-  }, [searchParams, warehouses]);
 
   const products = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -199,10 +203,10 @@ export default function WarehousePage() {
         quantity: Number(movement.quantity || 0),
         date: movement.created_at || movement.date || new Date().toISOString(),
         reference: movement.reference_id || movement.id,
-        user: movement.user_name || movement.created_by_name || "نامعلوم کارن",
+        user: profile?.full_name || "Azizullah",
         warehouseId: movement.warehouse_id || null,
       })),
-    [stockMovements],
+    [profile?.full_name, stockMovements],
   );
 
   const movementTotals = useMemo(() => {
@@ -311,44 +315,10 @@ export default function WarehousePage() {
     });
   }, [activeWarehouseId, detailsOpen, historyDate, historyType, movements]);
 
-  const lastMovementAt = useMemo(() => {
-    const map = new Map();
-
-    movements.forEach((movement) => {
-      const timestamp = new Date(movement.date).getTime();
-      if (!Number.isFinite(timestamp)) return;
-      const current = map.get(movement.productId) || 0;
-      if (timestamp > current) map.set(movement.productId, timestamp);
-    });
-
-    return map;
-  }, [movements]);
-
   const detailProducts = useMemo(() => {
-    const rows =
-      !detailsOpen || !activeWarehouseId
-        ? products
-        : products.filter((product) => product.warehouse_id === activeWarehouseId);
-
-    return [...rows].sort((a, b) => {
-      const aQuantity = Number(a.quantity || 0);
-      const bQuantity = Number(b.quantity || 0);
-
-      if (sortBy === "low") return aQuantity - bQuantity;
-      if (sortBy === "high") return bQuantity - aQuantity;
-
-      const aTime =
-        lastMovementAt.get(a.id) ||
-        new Date(a.updated_at || a.created_at || 0).getTime() ||
-        0;
-      const bTime =
-        lastMovementAt.get(b.id) ||
-        new Date(b.updated_at || b.created_at || 0).getTime() ||
-        0;
-
-      return bTime - aTime;
-    });
-  }, [activeWarehouseId, detailsOpen, lastMovementAt, products, sortBy]);
+    if (!detailsOpen || !activeWarehouseId) return products;
+    return products.filter((product) => product.warehouse_id === activeWarehouseId);
+  }, [activeWarehouseId, detailsOpen, products]);
 
   const totalPages = Math.max(
     1,
@@ -356,20 +326,10 @@ export default function WarehousePage() {
   );
 
   const visibleProducts = useMemo(() => {
+    if (showAllProducts) return detailProducts;
     const start = (page - 1) * PRODUCT_PAGE_SIZE;
     return detailProducts.slice(start, start + PRODUCT_PAGE_SIZE);
-  }, [detailProducts, page]);
-
-  const filteredWarehouses = useMemo(() => {
-    const query = warehouseSearch.trim().toLowerCase();
-    if (!query) return warehouses;
-
-    return warehouses.filter((warehouseItem) =>
-      [warehouseItem.name, warehouseItem.location, warehouseItem.description].some(
-        (value) => String(value || "").toLowerCase().includes(query),
-      ),
-    );
-  }, [warehouseSearch, warehouses]);
+  }, [detailProducts, page, showAllProducts]);
 
   const closeWarehouseModal = () => {
     setWarehouseModal(null);
@@ -402,29 +362,6 @@ export default function WarehousePage() {
       toast.error(getErrorMessage(error, "د ګودام معلومات ثبت نه شول."));
       throw error;
     }
-  };
-
-  const openProductEdit = (product) => {
-    setSelected(product);
-    setModal("edit");
-  };
-
-  const openWarehouseDetails = (warehouseId) => {
-    setActiveWarehouseId(warehouseId);
-    setDetailsOpen(true);
-    setPage(1);
-    const next = new URLSearchParams(searchParams);
-    next.set("warehouse", warehouseId);
-    setSearchParams(next, { replace: true });
-  };
-
-  const closeWarehouseDetails = () => {
-    setDetailsOpen(false);
-    setActiveWarehouseId(null);
-    setPage(1);
-    const next = new URLSearchParams(searchParams);
-    next.delete("warehouse");
-    setSearchParams(next, { replace: true });
   };
 
   const closeModal = () => {
@@ -478,7 +415,7 @@ export default function WarehousePage() {
             <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-100 sm:text-base">
-                  
+                 
                 </p>
                 <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
                   {tr("Warehouse Management", "د ګدام مدیریت", "مدیریت گدام")}
@@ -491,7 +428,7 @@ export default function WarehousePage() {
               {canManage ? (
                 <Button
                   variant="secondary"
-                  className="border-white/80 bg-white px-5 text-blue-700 hover:bg-blue-50"
+                  className="h-9 rounded-xl border-white/80 bg-white px-3 py-1.5 text-xs font-black text-blue-700 shadow-sm hover:bg-blue-50 sm:h-10 sm:px-4 sm:text-sm"
                   onClick={() => {
                     setSelectedWarehouse(null);
                     setWarehouseModal("add");
@@ -539,11 +476,8 @@ export default function WarehousePage() {
           </div>
         </section>
 
-        <section
-          dir="ltr"
-          className="wms-warehouse-overview-grid grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]"
-        >
-          <Card className="min-w-0 p-4 sm:p-5 xl:col-start-1 xl:row-start-1">
+        <section dir="ltr" className="min-w-0">
+          <Card className="min-w-0 p-4 sm:p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-black text-slate-950">Warehouses</h2>
@@ -556,7 +490,7 @@ export default function WarehousePage() {
               </span>
             </div>
 
-            <div className="wms-warehouse-grid grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),560px))]">
+            <div className="wms-warehouse-grid grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
               {warehouses.map((warehouseItem) => {
                 const itemStats = warehouseStats.get(warehouseItem.id) || { products: 0, stock: 0, low: 0 };
 
@@ -570,70 +504,14 @@ export default function WarehousePage() {
                     stock={itemStats.stock}
                     lowStock={itemStats.low}
                     onView={() => {
-                      openWarehouseDetails(warehouseItem.id);
+                      setActiveWarehouseId(warehouseItem.id);
+                      setDetailsOpen(true);
+                      setPage(1);
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                     onEdit={() => openWarehouseEdit(warehouseItem)}
                     canManage={canManage}
                   />
-                );
-              })}
-            </div>
-          </Card>
-
-          <Card className="min-w-0 h-fit p-4 sm:p-5 xl:col-start-2 xl:row-start-1">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-black text-slate-950">Warehouse List</h2>
-              <span className="text-xs font-black text-blue-600">View All</span>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-              <div className="relative">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={warehouseSearch}
-                  onChange={(event) => setWarehouseSearch(event.target.value)}
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                  placeholder="Search warehouse..."
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-2">
-              {filteredWarehouses.map((warehouseItem) => {
-                const itemStats = warehouseStats.get(warehouseItem.id) || { products: 0, stock: 0 };
-                const productsCount = itemStats.products;
-                const stockCount = itemStats.stock;
-
-                return (
-                  <button
-                    key={warehouseItem.id}
-                    type="button"
-                    onClick={() => openWarehouseDetails(warehouseItem.id)}
-                    className="flex min-w-0 w-full items-center gap-3 rounded-2xl border border-slate-100 p-3 text-left transition hover:border-blue-200 hover:bg-blue-50"
-                  >
-                    <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-xl text-blue-700">
-                      <FiHome />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-black text-slate-900">
-                        {warehouseItem.name}
-                      </span>
-                      <span className="mt-1 block text-xs text-slate-500">
-                        Products: {formatNumber(productsCount)} · Stock:{" "}
-                        {formatNumber(stockCount)}
-                      </span>
-                    </span>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${
-                        warehouseItem.status === "Inactive"
-                          ? "bg-slate-100 text-slate-600"
-                          : "bg-emerald-100 text-emerald-700"
-                      }`}
-                    >
-                      {warehouseItem.status || "Active"}
-                    </span>
-                  </button>
                 );
               })}
             </div>
@@ -676,70 +554,93 @@ export default function WarehousePage() {
 
   return (
     <div className="page-enter space-y-5">
-      <section className="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/90 p-5 shadow-lg shadow-slate-900/5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={closeWarehouseDetails}
-            className="icon-button mt-0.5 size-10"
-            aria-label="Back to warehouses"
-          >
-            <FiArrowLeft />
-          </button>
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-              {activeWarehouse?.name || "Warehouse Details"}
-            </h1>
-            <p className="pashto-text mt-1 text-sm text-slate-500">
-              د همدې ګدام جنسونه، سټاک او وروستي فعالیتونه
-            </p>
+      <section className="wms-hero-section overflow-hidden rounded-[30px] border border-white/70 bg-white shadow-xl shadow-slate-900/10 sm:rounded-[34px]">
+        <div
+          className="wms-photo-hero relative min-h-[250px] overflow-hidden px-5 pb-28 pt-6 text-white sm:min-h-[210px] sm:px-8 sm:pb-16 sm:pt-7 lg:min-h-[220px]"
+          style={{ backgroundImage: "url('/header-images/header-daisy.jpeg')" }}
+        >
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-slate-950/76 via-blue-950/46 to-sky-800/18" />
+
+          <div className="relative z-10 flex h-full flex-col justify-between gap-5 sm:flex-row-reverse sm:items-start">
+            <div dir="rtl" className="max-w-xl self-end text-right drop-shadow-sm sm:ml-auto">
+              
+              <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
+                {activeWarehouse?.name || "Warehouse Details"}
+              </h1>
+              <p className="pashto-text mt-3 max-w-lg text-sm font-semibold leading-7 text-blue-50 sm:text-base">
+                د همدې ګدام جنسونه، سټاک، داخل او خارج او وروستي فعالیتونه په یوه منظم ځای کې وګورئ.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 self-start">
+              <button
+                type="button"
+                onClick={() => setDetailsOpen(false)}
+                className="inline-flex size-10 items-center justify-center rounded-xl border border-white/80 bg-white text-blue-700 shadow-lg shadow-blue-950/20 transition hover:-translate-y-0.5 hover:bg-blue-50 sm:size-11"
+                aria-label="Back to warehouses"
+                title="Back"
+              >
+                <FiArrowLeft />
+              </button>
+
+              {canManage ? (
+                <button
+                  type="button"
+                  onClick={() => setModal("add")}
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-white/80 bg-white px-3 text-xs font-black text-blue-700 shadow-lg shadow-blue-950/20 transition hover:-translate-y-0.5 hover:bg-blue-50 sm:h-11 sm:px-4 sm:text-sm"
+                >
+                  <FiPlus className="text-base" />
+                  <span className="hidden sm:inline">Add Product</span>
+                  <span className="sm:hidden">نوی جنس</span>
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        {canManage ? (
-          <Button onClick={() => setModal("add")}>
-            <FiPlus /> Add Product
-          </Button>
-        ) : null}
-      </section>
-
-      <section className="wms-details-summary-grid grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <DetailsSummaryCard
-          title="جمله جنس"
-          value={formatNumber(detailStats.products)}
-          icon={FiPackage}
-          tone="blue"
-          delay="stagger-delay-0"
-        />
-        <DetailsSummaryCard
-          title="سټاک ان"
-          value={formatNumber(detailStats.stockIn)}
-          icon={FiArrowDown}
-          tone="green"
-          delay="stagger-delay-1"
-        />
-        <DetailsSummaryCard
-          title="سټاک اوت"
-          value={formatNumber(detailStats.stockOut)}
-          icon={FiArrowUp}
-          tone="orange"
-          delay="stagger-delay-2"
-        />
-        <DetailsSummaryCard
-          title="موجود مال"
-          value={formatMoney(detailStats.value)}
-          icon={FiDollarSign}
-          tone="purple"
-          delay="stagger-delay-3"
-        />
-        <DetailsSummaryCard
-          title="سټاک کم"
-          value={formatNumber(detailStats.low)}
-          icon={FiAlertTriangle}
-          tone="amber"
-          delay="stagger-delay-4"
-          className="col-span-2 lg:col-span-1"
-        />
+        <div className="wms-details-summary-grid relative z-20 -mt-10 grid grid-cols-2 gap-3 px-3 pb-5 sm:-mt-12 sm:gap-4 sm:px-6 sm:pb-7 lg:grid-cols-5">
+          <DetailsSummaryCard
+            title="جمله جنس"
+            value={formatNumber(detailStats.products)}
+            caption="د همدې ګدام ټول جنسونه"
+            icon={FiPackage}
+            tone="blue"
+            delay="stagger-delay-0"
+          />
+          <DetailsSummaryCard
+            title="سټاک ان"
+            value={formatNumber(detailStats.stockIn)}
+            caption="ټول داخل شوي مال"
+            icon={FiArrowDown}
+            tone="green"
+            delay="stagger-delay-1"
+          />
+          <DetailsSummaryCard
+            title="سټاک اوت"
+            value={formatNumber(detailStats.stockOut)}
+            caption="ټول وتلي مال"
+            icon={FiArrowUp}
+            tone="orange"
+            delay="stagger-delay-2"
+          />
+          <DetailsSummaryCard
+            title="د مال قیمت"
+            value={formatMoney(detailStats.value)}
+            caption="د موجود مال ټول ارزښت"
+            icon={FiDollarSign}
+            tone="purple"
+            delay="stagger-delay-3"
+            className="hidden lg:block"
+          />
+          <DetailsSummaryCard
+            title="سټاک کم"
+            value={formatNumber(detailStats.low)}
+            caption="پاملرنې ته اړتیا لري"
+            icon={FiAlertTriangle}
+            tone="amber"
+            delay="stagger-delay-4"
+          />
+        </div>
       </section>
 
       <Card className="overflow-hidden p-0">
@@ -748,7 +649,7 @@ export default function WarehousePage() {
             <div className="relative">
               <FiFilter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <select
-                className="h-11 rounded-xl border border-slate-200 bg-white pl-9 pr-8 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                className="h-10 rounded-xl border border-slate-200 bg-white pl-9 pr-8 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100 sm:h-11 sm:text-sm"
                 value={status}
                 onChange={(event) => setStatus(event.target.value)}
               >
@@ -759,23 +660,27 @@ export default function WarehousePage() {
               </select>
             </div>
 
-            <select
-              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-              value={sortBy}
-              onChange={(event) => setSortBy(event.target.value)}
-              aria-label="Sort products"
-            >
-              <option value="latest">وروستی بدلون</option>
-              <option value="low">کم مقدار</option>
-              <option value="high">ډېر مقدار</option>
-            </select>
-
             <button
               type="button"
               onClick={exportProducts}
-              className="secondary-button h-11 rounded-xl px-4 py-2"
+              className="secondary-button h-10 rounded-xl px-3 py-2 text-xs sm:h-11 sm:px-4 sm:text-sm"
             >
               <FiDownload /> Export
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowAllProducts((value) => !value);
+                setPage(1);
+              }}
+              className={`h-10 rounded-xl border px-3 text-xs font-black shadow-sm transition sm:h-11 sm:px-4 sm:text-sm ${
+                showAllProducts
+                  ? "border-blue-700 bg-blue-700 text-white"
+                  : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+              }`}
+            >
+              {showAllProducts ? "پاڼې وښایه" : "ټول وښایه"}
             </button>
           </div>
 
@@ -784,7 +689,7 @@ export default function WarehousePage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 pr-11 text-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 pr-10 text-xs outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100 sm:h-11 sm:px-4 sm:pr-11 sm:text-sm"
               placeholder="Search product..."
             />
           </div>
@@ -830,7 +735,7 @@ export default function WarehousePage() {
                         className="bg-white transition hover:bg-blue-50/40"
                       >
                         <td className="px-5 py-4 text-right font-bold text-slate-700">
-                          {(page - 1) * PRODUCT_PAGE_SIZE + index + 1}
+                          {(showAllProducts ? 0 : (page - 1) * PRODUCT_PAGE_SIZE) + index + 1}
                         </td>
                         <td className="px-5 py-4 text-right">
                           <p className="pashto-text text-base font-black text-slate-950">
@@ -855,14 +760,14 @@ export default function WarehousePage() {
                           <div dir="ltr" className="flex justify-center gap-2">
                             <button
                               type="button"
-                              onClick={() => navigate(`/stock-in?product=${product.id}&warehouse=${activeWarehouseId || product.warehouse_id || ""}`)}
+                              onClick={() => navigate(`/stock-in?product=${product.id}`)}
                               className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700"
                             >
                               <FiArrowDown /> In
                             </button>
                             <button
                               type="button"
-                              onClick={() => navigate(`/stock-out?product=${product.id}&warehouse=${activeWarehouseId || product.warehouse_id || ""}`)}
+                              onClick={() => navigate(`/stock-out?product=${product.id}`)}
                               className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 text-xs font-black text-white shadow-sm transition hover:bg-red-700"
                             >
                               <FiArrowUp /> Out
@@ -870,22 +775,24 @@ export default function WarehousePage() {
                             <button
                               type="button"
                               onClick={() => navigate(`/warehouse/products/${product.id}/history`)}
-                              className="inline-flex size-9 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm transition hover:bg-violet-700"
+                              onMouseEnter={() => {
+                                void productService.prefetch?.(product.id);
+                                void stockService.prefetchMovementHistory?.({ product_id: product.id, limit: 500 });
+                              }}
+                              onFocus={() => {
+                                void productService.prefetch?.(product.id);
+                                void stockService.prefetchMovementHistory?.({ product_id: product.id, limit: 500 });
+                              }}
+                              onTouchStart={() => {
+                                void productService.prefetch?.(product.id);
+                                void stockService.prefetchMovementHistory?.({ product_id: product.id, limit: 500 });
+                              }}
+                              className="inline-flex size-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm transition hover:bg-blue-700"
                               aria-label={`View ${product.name} stock history`}
                               title="View History"
                             >
                               <FiEye />
                             </button>
-                            {canManage ? (
-                              <button
-                                type="button"
-                                onClick={() => openProductEdit(product)}
-                                className="inline-flex size-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm transition hover:bg-blue-700"
-                                aria-label={`Edit ${product.name}`}
-                              >
-                                <FiEdit2 />
-                              </button>
-                            ) : null}
                             {canDelete ? (
                               <button
                                 type="button"
@@ -905,7 +812,7 @@ export default function WarehousePage() {
               </table>
             </div>
 
-            <div className="space-y-3 p-3 md:hidden">
+            <div className="space-y-2 p-2.5 md:hidden">
               {visibleProducts.map((product, index) => {
                 const totals = movementTotals.get(product.id) || {
                   in: 0,
@@ -916,23 +823,23 @@ export default function WarehousePage() {
                 return (
                   <article
                     key={product.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    className="rounded-[18px] border border-slate-200 bg-white p-3 shadow-sm"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="pashto-text truncate text-base font-black text-slate-950">
+                        <p className="pashto-text truncate text-sm font-black text-slate-950">
                           {product.name}
                         </p>
-                        <span className={`status-badge mt-2 ${productStatus.className}`}>
+                        <span className={`status-badge mt-1.5 px-2 py-0.5 text-[9px] ${productStatus.className}`}>
                           {productStatus.label}
                         </span>
                       </div>
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 font-black text-blue-700">
-                        {(page - 1) * PRODUCT_PAGE_SIZE + index + 1}
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xs font-black text-blue-700">
+                        {(showAllProducts ? 0 : (page - 1) * PRODUCT_PAGE_SIZE) + index + 1}
                       </span>
                     </div>
 
-                    <div className="mt-4 grid grid-cols-3 gap-2">
+                    <div className="mt-2.5 grid grid-cols-3 gap-1.5">
                       <MiniMetric
                         label="سټاک ان"
                         value={formatNumber(totals.in)}
@@ -950,29 +857,43 @@ export default function WarehousePage() {
                       />
                     </div>
 
-                    <div className="mt-4 grid grid-cols-3 gap-2">
+                    <div className="mt-2.5 grid grid-cols-3 gap-1.5">
                       <button
                         type="button"
-                        onClick={() => navigate(`/stock-in?product=${product.id}&warehouse=${activeWarehouseId || product.warehouse_id || ""}`)}
-                        className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-emerald-600 text-[11px] font-black text-white"
+                        onClick={() => navigate(`/stock-in?product=${product.id}`)}
+                        className="inline-flex h-9 items-center justify-center gap-1 rounded-lg bg-emerald-600 text-[11px] font-black text-white"
                       >
                         <FiArrowDown /> In
                       </button>
                       <button
                         type="button"
-                        onClick={() => navigate(`/stock-out?product=${product.id}&warehouse=${activeWarehouseId || product.warehouse_id || ""}`)}
-                        className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-red-600 text-[11px] font-black text-white"
+                        onClick={() => navigate(`/stock-out?product=${product.id}`)}
+                        className="inline-flex h-9 items-center justify-center gap-1 rounded-lg bg-red-600 text-[11px] font-black text-white"
                       >
                         <FiArrowUp /> Out
                       </button>
                       <button
                         type="button"
                         onClick={() => navigate(`/warehouse/products/${product.id}/history`)}
-                        className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-blue-600 text-[11px] font-black text-white"
+                        onMouseEnter={() => {
+                          void productService.prefetch?.(product.id);
+                          void stockService.prefetchMovementHistory?.({ product_id: product.id, limit: 500 });
+                        }}
+                        onFocus={() => {
+                          void productService.prefetch?.(product.id);
+                          void stockService.prefetchMovementHistory?.({ product_id: product.id, limit: 500 });
+                        }}
+                        onTouchStart={() => {
+                          void productService.prefetch?.(product.id);
+                          void stockService.prefetchMovementHistory?.({ product_id: product.id, limit: 500 });
+                        }}
+                        className="inline-flex h-9 items-center justify-center gap-1 rounded-lg bg-blue-600 text-[11px] font-black text-white"
+                        aria-label={`View ${product.name} stock history`}
                       >
                         <FiEye /> View
                       </button>
                     </div>
+
                   </article>
                 );
               })}
@@ -981,11 +902,17 @@ export default function WarehousePage() {
         )}
 
         <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-medium text-slate-600">
-            Showing {detailProducts.length ? (page - 1) * PRODUCT_PAGE_SIZE + 1 : 0} to {Math.min(page * PRODUCT_PAGE_SIZE, detailProducts.length)} of {detailProducts.length} items
+          <p className="text-xs font-bold text-slate-500 sm:text-sm sm:font-medium sm:text-slate-600">
+            {detailProducts.length === 0
+              ? "0 items"
+              : showAllProducts
+                ? `Showing all ${detailProducts.length} items`
+                : `Showing ${(page - 1) * PRODUCT_PAGE_SIZE + 1} to ${Math.min(page * PRODUCT_PAGE_SIZE, detailProducts.length)} of ${detailProducts.length} items`}
           </p>
 
-          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          <div className={showAllProducts ? "pointer-events-none opacity-40" : ""}>
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          </div>
         </div>
       </Card>
 
@@ -1088,18 +1015,22 @@ function WarehouseSummaryCard({ title, value, caption, icon: Icon, tone, delay }
     blue: {
       icon: "bg-blue-100 text-blue-700",
       caption: "text-blue-600",
+      border: "border-blue-100",
     },
     green: {
       icon: "bg-emerald-100 text-emerald-700",
       caption: "text-emerald-600",
+      border: "border-emerald-100",
     },
     purple: {
       icon: "bg-violet-100 text-violet-700",
       caption: "text-violet-600",
+      border: "border-violet-100",
     },
     orange: {
       icon: "bg-orange-100 text-orange-600",
       caption: "text-orange-600",
+      border: "border-orange-100",
     },
   };
 
@@ -1107,56 +1038,49 @@ function WarehouseSummaryCard({ title, value, caption, icon: Icon, tone, delay }
 
   return (
     <article
-      className={`wms-summary-card stagger-item ${delay} rounded-[20px] border border-slate-100 bg-white p-3 shadow-lg shadow-slate-900/10 transition duration-300 hover:-translate-y-1 sm:rounded-[22px] sm:p-3.5`}
+      className={`wms-summary-card stagger-item ${delay} min-w-0 rounded-[22px] border ${style.border} bg-white p-3.5 shadow-[0_18px_38px_rgba(15,23,42,0.14)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(37,99,235,0.18)] sm:rounded-[26px] sm:p-5`}
     >
-      <div className="flex items-center gap-2.5">
-        <span
-          className={`flex size-10 shrink-0 items-center justify-center rounded-xl text-lg sm:size-11 sm:text-xl ${style.icon}`}
-        >
+      <div className="flex items-center gap-3 sm:gap-4">
+        <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm sm:size-14 sm:text-2xl ${style.icon}`}>
           <Icon />
         </span>
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold text-slate-600 sm:text-xs">{title}</p>
-          <p className="mt-0.5 truncate text-lg font-black text-slate-950 sm:text-xl">
-            {value}
-          </p>
-          <p className={`mt-0.5 truncate text-[9px] font-bold sm:text-[10px] ${style.caption}`}>
-            {caption}
-          </p>
+        <div dir="rtl" className="min-w-0 flex-1 text-right">
+          <p className="truncate text-[12px] font-black text-slate-700 sm:text-sm">{title}</p>
+          <p className="mt-1 truncate text-xl font-black tracking-tight text-slate-950 sm:text-[1.75rem]">{value}</p>
+          <p className={`mt-1 truncate text-[11px] font-bold sm:text-xs ${style.caption}`}>{caption}</p>
         </div>
       </div>
     </article>
   );
 }
 
-function DetailsSummaryCard({ title, value, icon: Icon, tone, delay, className = "" }) {
+function DetailsSummaryCard({ title, value, caption, icon: Icon, tone, delay, className = "" }) {
   const tones = {
-    blue: "bg-blue-100 text-blue-700",
-    green: "bg-emerald-100 text-emerald-700",
-    orange: "bg-orange-100 text-orange-600",
-    purple: "bg-violet-100 text-violet-700",
-    amber: "bg-amber-100 text-amber-600",
+    blue: { border: "border-blue-100", icon: "bg-blue-100 text-blue-700", caption: "text-blue-600" },
+    green: { border: "border-emerald-100", icon: "bg-emerald-100 text-emerald-700", caption: "text-emerald-600" },
+    orange: { border: "border-orange-100", icon: "bg-orange-100 text-orange-600", caption: "text-orange-600" },
+    purple: { border: "border-violet-100", icon: "bg-violet-100 text-violet-700", caption: "text-violet-600" },
+    amber: { border: "border-amber-100", icon: "bg-amber-100 text-amber-700", caption: "text-amber-600" },
   };
+
+  const style = tones[tone] || tones.blue;
 
   return (
     <article
-      className={`wms-summary-card stagger-item ${delay} ${className} rounded-[20px] border border-slate-200/75 bg-white p-4 shadow-lg shadow-slate-900/5 sm:p-5`}
+      className={`wms-summary-card stagger-item ${delay} ${className} min-w-0 rounded-[22px] border ${style.border} bg-white p-3.5 shadow-[0_18px_38px_rgba(15,23,42,0.14)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(37,99,235,0.18)] sm:rounded-[26px] sm:p-5`}
     >
       <div className="flex items-center gap-3 sm:gap-4">
         <span
-          className={`flex size-12 shrink-0 items-center justify-center rounded-2xl text-xl sm:size-14 sm:text-2xl ${
-            tones[tone] || tones.blue
-          }`}
+          className={`flex size-12 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm sm:size-14 sm:text-2xl ${style.icon}`}
         >
           <Icon />
         </span>
-        <div className="min-w-0">
-          <p className="truncate text-xl font-black text-slate-950 sm:text-2xl">
+        <div dir="rtl" className="min-w-0 flex-1 text-right">
+          <p className="truncate text-[12px] font-black text-slate-700 sm:text-sm">{title}</p>
+          <p className="mt-1 truncate text-xl font-black tracking-tight text-slate-950 sm:text-[1.75rem]">
             {value}
           </p>
-          <p className="pashto-text mt-1 truncate text-xs font-black text-slate-600 sm:text-sm">
-            {title}
-          </p>
+          <p className={`mt-1 truncate text-[11px] font-bold sm:text-xs ${style.caption}`}>{caption}</p>
         </div>
       </div>
     </article>
@@ -1177,8 +1101,8 @@ function WarehouseCard({
   const active = status !== "Inactive";
 
   return (
-    <article className="wms-warehouse-card min-h-[300px] sm:min-h-[310px] lg:min-h-[320px] min-w-0 w-full overflow-hidden flex flex-col rounded-[20px] border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(37,99,235,0.13)]">
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-800 via-blue-600 to-cyan-400 px-3.5 py-5 text-white sm:px-4 sm:py-5">
+    <article className="wms-warehouse-card min-w-0 w-full overflow-hidden flex flex-col rounded-[20px] border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(37,99,235,0.13)]">
+      <div className="relative min-h-[96px] overflow-hidden bg-gradient-to-r from-blue-800 via-blue-600 to-cyan-400 px-3.5 py-6 text-white sm:min-h-[104px] sm:px-4 sm:py-7">
         <div className="pointer-events-none absolute -right-8 -top-10 size-24 rounded-full bg-white/10 blur-2xl" />
         <div className="relative flex min-w-0 items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -1202,9 +1126,7 @@ function WarehouseCard({
         <WarehouseMetric label="Low Stock" value={formatNumber(lowStock)} icon={FiAlertTriangle} tone="red" danger />
       </div>
 
-      <div className="flex-1" />
-
-      <div className={`mt-auto grid gap-2 px-3 pb-3 pt-3 ${canManage ? "grid-cols-[1fr_42px]" : "grid-cols-1"}`}>
+      <div className={`grid gap-2 px-3 pb-3 pt-3 ${canManage ? "grid-cols-[1fr_42px]" : "grid-cols-1"}`}>
         <Button onClick={onView} className="min-w-0 rounded-xl py-2 text-xs">
           <FiEye /> <span className="truncate">View Warehouse</span>
         </Button>
@@ -1276,9 +1198,9 @@ function WarehouseMetric({
 
 function MiniMetric({ label, value, className = "" }) {
   return (
-    <div className="rounded-xl bg-slate-50 p-2.5 text-center">
-      <p className="pashto-text text-[10px] font-bold text-slate-500">{label}</p>
-      <p className={`mt-1 text-sm font-black ${className}`}>{value}</p>
+    <div className="rounded-lg border border-slate-100 bg-slate-50 px-1.5 py-1.5 text-center">
+      <p className="pashto-text text-[9px] font-bold text-slate-500">{label}</p>
+      <p className={`mt-0.5 text-xs font-black ${className}`}>{value}</p>
     </div>
   );
 }
