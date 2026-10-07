@@ -25,17 +25,17 @@ export default function StockMovementWorkspace({ type }) {
   const { profile } = useAuth();
   const [searchParams] = useSearchParams();
   const requestedProductId = searchParams.get("product") || "";
-  const requestedWarehouseId = searchParams.get("warehouse") || "";
-  const [products, setProducts] = useState([]);
+  const cachedProducts = productService.peekList?.({ page: 1, limit: 500, status: "all" });
+  const [products, setProducts] = useState(() => cachedProducts?.data || []);
   const [selectedId, setSelectedId] = useState(requestedProductId);
   const [quantity, setQuantity] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !cachedProducts);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!productService.peekList?.({ page: 1, limit: 500, status: "all" })) setLoading(true);
     try {
-      const response = await productService.list({ page: 1, limit: 300, status: "all" });
+      const response = await productService.list({ page: 1, limit: 500, status: "all" });
       const rows = response?.data || [];
       setProducts(rows);
       if (requestedProductId && rows.some((p) => String(p.id) === String(requestedProductId))) {
@@ -60,14 +60,6 @@ export default function StockMovementWorkspace({ type }) {
   const insufficient = mode === "out" && amount > currentStock;
   const MovementIcon = mode === "in" ? FiArrowDown : FiArrowUp;
   const isLocked = Boolean(requestedProductId && selectedProduct);
-
-  const goBack = () => {
-    if (requestedWarehouseId) {
-      navigate(`/warehouse?warehouse=${encodeURIComponent(requestedWarehouseId)}`);
-      return;
-    }
-    navigate(-1);
-  };
 
   const submit = async (event) => {
     event.preventDefault();
@@ -102,7 +94,7 @@ export default function StockMovementWorkspace({ type }) {
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
-              onClick={goBack}
+              onClick={() => navigate(-1)}
               className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-white/15 text-xl text-white transition hover:bg-white/25"
               aria-label="شاته"
               title="شاته"
@@ -179,7 +171,7 @@ export default function StockMovementWorkspace({ type }) {
               <button type="submit" disabled={saving || !selectedProduct || amount <= 0 || insufficient} className={`flex h-12 w-full items-center justify-center gap-2 rounded-xl px-8 font-black text-white shadow-lg disabled:opacity-50 ${mode === "in" ? "bg-gradient-to-l from-emerald-700 to-cyan-500" : "bg-gradient-to-l from-rose-700 to-orange-500"}`}>
                 <FiSave /> {saving ? "ثبتېږي..." : "ثبت"}
               </button>
-              <button type="button" onClick={goBack} className="secondary-button h-12 rounded-xl px-6">
+              <button type="button" onClick={() => navigate(-1)} className="secondary-button h-12 rounded-xl px-6">
                 <FiArrowRight /> شاته
               </button>
             </div>
