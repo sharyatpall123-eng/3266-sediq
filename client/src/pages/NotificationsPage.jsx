@@ -22,17 +22,30 @@ const tones = {
 
 export default function NotificationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
   const initialFilter = ["all", "read", "unread"].includes(
     searchParams.get("filter"),
   )
     ? searchParams.get("filter")
     : "all";
   const [filter, setFilter] = useState(initialFilter);
+  const initialResponse = notificationService.peekList({
+    unread: initialFilter === "unread" ? true : undefined,
+    limit: 100,
+  });
+  const initialRows = initialResponse?.data || [];
+  const [items, setItems] = useState(() =>
+    initialFilter === "read"
+      ? initialRows.filter((item) => item.is_read)
+      : initialRows,
+  );
+  const [loading, setLoading] = useState(() => !initialResponse);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const warm = notificationService.peekList({
+      unread: filter === "unread" ? true : undefined,
+      limit: 100,
+    });
+    if (!warm) setLoading(true);
 
     try {
       const response = await notificationService.list({
