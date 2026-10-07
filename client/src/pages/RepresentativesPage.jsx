@@ -20,7 +20,6 @@ import Modal from "../components/ui/Modal";
 import SearchInput from "../components/ui/SearchInput";
 import { getErrorMessage } from "../lib/api";
 import { representativeService } from "../Services/wmsService";
-import { useAuth } from "../context/AuthContext";
 import { formatNumber } from "../utils/format";
 
 const emptyForm = {
@@ -32,30 +31,31 @@ const emptyForm = {
 
 export default function RepresentativesPage() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
-  const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const initialCompanies = representativeService.peekList({ search: "", limit: 100 });
+  const [companies, setCompanies] = useState(() => initialCompanies?.data || []);
+  const [loading, setLoading] = useState(() => !initialCompanies);
   const [search, setSearch] = useState("");
   const [view, setView] = useState("grid");
   const [modal, setModal] = useState(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!representativeService.peekList({ search, limit: 100 })) setLoading(true);
 
     try {
-      const response = await representativeService.list({ search, limit: 100, actor: profile });
+      const response = await representativeService.list({ search, limit: 100 });
       setCompanies(response.data || []);
     } catch (error) {
       toast.error(getErrorMessage(error, "استازي ترلاسه نه شول."));
     } finally {
       setLoading(false);
     }
-  }, [profile, search]);
+  }, [search]);
 
   useEffect(() => {
-    const timer = setTimeout(load, 250);
+    const delay = search.trim() ? 250 : 0;
+    const timer = setTimeout(load, delay);
     return () => clearTimeout(timer);
-  }, [load]);
+  }, [load, search]);
 
   const summary = useMemo(
     () =>
@@ -240,6 +240,8 @@ export default function RepresentativesPage() {
                   company={company}
                   onView={() => openDetails(company)}
                   onAccount={() => openAccount(company)}
+                  onWarmView={() => void representativeService.prefetch(company.id)}
+                  onWarmAccount={() => void representativeService.prefetchAccount(company.id)}
                 />
               ))}
             </div>
@@ -251,6 +253,8 @@ export default function RepresentativesPage() {
                   company={company}
                   onView={() => openDetails(company)}
                   onAccount={() => openAccount(company)}
+                  onWarmView={() => void representativeService.prefetch(company.id)}
+                  onWarmAccount={() => void representativeService.prefetchAccount(company.id)}
                 />
               ))}
             </div>
@@ -406,7 +410,7 @@ function RepresentativeSummaryCard({ title, value, caption, tone, icon: Icon, su
   );
 }
 
-function RepresentativeCard({ company, onView, onAccount }) {
+function RepresentativeCard({ company, onView, onAccount, onWarmView, onWarmAccount }) {
   const total = Number(company.total_goods || 0);
   const delivered = Number(company.delivered_goods || 0);
   const remaining = Number.isFinite(Number(company.remaining_goods))
@@ -444,6 +448,9 @@ function RepresentativeCard({ company, onView, onAccount }) {
           <button
             type="button"
             onClick={onView}
+            onMouseEnter={onWarmView}
+            onFocus={onWarmView}
+            onTouchStart={onWarmView}
             className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 text-sm font-black text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-100 sm:text-base"
           >
             <span>تفصیلات</span>
@@ -453,6 +460,9 @@ function RepresentativeCard({ company, onView, onAccount }) {
           <button
             type="button"
             onClick={onAccount}
+            onMouseEnter={onWarmAccount}
+            onFocus={onWarmAccount}
+            onTouchStart={onWarmAccount}
             className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-gradient-to-l from-emerald-600 to-teal-500 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition hover:-translate-y-0.5 hover:from-emerald-700 hover:to-teal-600 sm:text-base"
           >
             <span>حساب</span>
@@ -464,7 +474,7 @@ function RepresentativeCard({ company, onView, onAccount }) {
   );
 }
 
-function RepresentativeListRow({ company, onView, onAccount }) {
+function RepresentativeListRow({ company, onView, onAccount, onWarmView, onWarmAccount }) {
   const total = Number(company.total_goods || 0);
   const delivered = Number(company.delivered_goods || 0);
   const remaining = Number.isFinite(Number(company.remaining_goods))
@@ -497,6 +507,9 @@ function RepresentativeListRow({ company, onView, onAccount }) {
           <button
             type="button"
             onClick={onView}
+            onMouseEnter={onWarmView}
+            onFocus={onWarmView}
+            onTouchStart={onWarmView}
             className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 font-black text-blue-700 transition hover:bg-blue-100"
           >
             تفصیلات <FiEye />
@@ -504,6 +517,9 @@ function RepresentativeListRow({ company, onView, onAccount }) {
           <button
             type="button"
             onClick={onAccount}
+            onMouseEnter={onWarmAccount}
+            onFocus={onWarmAccount}
+            onTouchStart={onWarmAccount}
             className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-600 font-black text-white shadow-md shadow-emerald-500/20 transition hover:bg-emerald-700"
           >
             حساب <FiDollarSign />
